@@ -1,17 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { BasicInfoStep } from "./wizard-steps/basic-info-step"
-import { DateTimeStep } from "./wizard-steps/datetime-step"
 import { LocationStep } from "./wizard-steps/location-step"
 import { MediaStep } from "./wizard-steps/media-step"
 import { TicketsStep } from "./wizard-steps/tickets-step"
-import { SettingsStep } from "./wizard-steps/settings-step"
+import { PromotionalStep } from "./wizard-steps/promotional-step"
 import { ReviewStep } from "./wizard-steps/review-step"
 import { GetDPTemplateStep } from "./wizard-steps/getdp-template-step"
 import { useToast } from "@/hooks/use-toast"
@@ -23,12 +22,17 @@ export interface EventFormData {
   category: string
   eventType: "free" | "paid" | "donation"
 
-  // Date & Time
+  // Date & Time (merged into Basic Info)
   startDate: string
   endDate: string
   startTime: string
   endTime: string
   timezone: string
+
+  // Dynamic step toggles
+  enablePromotions: boolean
+  promotionChannels: string[]
+  enableGetDP: boolean
 
   // Location
   isOnline: boolean
@@ -43,7 +47,7 @@ export interface EventFormData {
   bannerImage: File | null
   galleryImages: File[]
 
-  // Tickets
+  // Tickets (dynamic)
   ticketTypes: Array<{
     id: string
     name: string
@@ -54,7 +58,7 @@ export interface EventFormData {
     saleEndDate: string
   }>
 
-  // Settings
+  // Promotional Settings (dynamic)
   maxCapacity: number
   requiresApproval: boolean
   allowGuestRegistration: boolean
@@ -65,12 +69,23 @@ export interface EventFormData {
     required: boolean
     options?: string[]
   }>
+  whatsappMessages: {
+    confirmation: string
+    reminder: string
+  }
+  emailMessages: {
+    subject: string
+    body: string
+  }
+  autoSendConfirmation: boolean
+  autoSendReminders: boolean
+  reminderTiming: string
 
   // SEO
   slug: string
   metaDescription: string
 
-  // GetDP Template
+  // GetDP Template (dynamic)
   getdpTemplate: {
     enabled: boolean
     templateId: string
@@ -93,16 +108,56 @@ export interface EventFormData {
   }
 }
 
-const steps = [
-  { id: 1, title: "Basic Info", description: "Event details and category" },
-  { id: 2, title: "Date & Time", description: "When your event happens" },
-  { id: 3, title: "Location", description: "Where your event takes place" },
-  { id: 4, title: "Media", description: "Images and visual content" },
-  { id: 5, title: "Tickets", description: "Pricing and ticket types" },
-  { id: 6, title: "Settings", description: "Additional configurations" },
-  { id: 7, title: "GetDP Template", description: "Personalized attendee flyers" },
-  { id: 8, title: "Review", description: "Review and publish" },
-]
+const getSteps = (formData: EventFormData) => {
+  const baseSteps = [
+    { id: 1, title: "Basic Info", description: "Event details, date & time", key: "basic" },
+    { id: 2, title: "Location", description: "Where your event takes place", key: "location" },
+    { id: 3, title: "Media", description: "Images and visual content", key: "media" },
+  ]
+
+  const dynamicSteps = []
+  let stepId = 4
+
+  // Add Tickets step only for paid events
+  if (formData.eventType === "paid" || formData.eventType === "donation") {
+    dynamicSteps.push({
+      id: stepId++,
+      title: "Tickets",
+      description: "Pricing and ticket types",
+      key: "tickets",
+    })
+  }
+
+  // Add GetDP step if enabled
+  if (formData.enableGetDP) {
+    dynamicSteps.push({
+      id: stepId++,
+      title: "GetDP Template",
+      description: "Personalized attendee flyers",
+      key: "getdp",
+    })
+  }
+
+  // Add Promotional step if enabled
+  if (formData.enablePromotions) {
+    dynamicSteps.push({
+      id: stepId++,
+      title: "Promotional",
+      description: "Marketing and registration settings",
+      key: "promotional",
+    })
+  }
+
+  // Always add Review as the last step
+  const reviewStep = {
+    id: stepId,
+    title: "Review",
+    description: "Review and publish",
+    key: "review",
+  }
+
+  return [...baseSteps, ...dynamicSteps, reviewStep]
+}
 
 export function EventCreationWizard() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -120,6 +175,9 @@ export function EventCreationWizard() {
     startTime: "",
     endTime: "",
     timezone: "Africa/Lagos",
+    enablePromotions: false,
+    promotionChannels: [],
+    enableGetDP: false,
     isOnline: false,
     venueName: "",
     venueAddress: "",
@@ -134,6 +192,17 @@ export function EventCreationWizard() {
     requiresApproval: false,
     allowGuestRegistration: true,
     customFields: [],
+    whatsappMessages: {
+      confirmation: "",
+      reminder: "",
+    },
+    emailMessages: {
+      subject: "",
+      body: "",
+    },
+    autoSendConfirmation: true,
+    autoSendReminders: false,
+    reminderTiming: "24h",
     slug: "",
     metaDescription: "",
     getdpTemplate: {
@@ -158,27 +227,49 @@ export function EventCreationWizard() {
     },
   })
 
+  const steps = useMemo(() => getSteps(formData), [formData])
+
   const updateFormData = (updates: Partial<EventFormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }))
+    setFormData((prev) => {
+      const newData = { ...prev, ...updates }
+
+      const newSteps = getSteps(newData)
+      const currentStepKey = steps.find((s) => s.id === currentStep)?.key
+      const newCurrentStep = newSteps.find((s) => s.key === currentStepKey)?.id || 1
+
+      if (newCurrentStep !== currentStep) {
+        setCurrentStep(newCurrentStep)
+      }
+
+      return newData
+    })
   }
 
   const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 1:
-        return !!(formData.title && formData.description && formData.category)
-      case 2:
-        return !!(formData.startDate && formData.endDate && formData.startTime && formData.endTime)
-      case 3:
+    const stepKey = steps.find((s) => s.id === step)?.key
+
+    switch (stepKey) {
+      case "basic":
+        return !!(
+          formData.title &&
+          formData.description &&
+          formData.category &&
+          formData.startDate &&
+          formData.endDate &&
+          formData.startTime &&
+          formData.endTime
+        )
+      case "location":
         return formData.isOnline ? !!formData.meetingLink : !!(formData.venueName && formData.venueAddress)
-      case 4:
+      case "media":
         return true // Media is optional
-      case 5:
+      case "tickets":
         return formData.eventType === "free" || formData.ticketTypes.length > 0
-      case 6:
-        return true // Settings are optional
-      case 7:
+      case "promotional":
+        return true // Promotional settings are optional
+      case "getdp":
         return true // GetDP template is optional
-      case 8:
+      case "review":
         return true // Review step
       default:
         return false
@@ -248,22 +339,22 @@ export function EventCreationWizard() {
   }
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
+    const stepKey = steps.find((s) => s.id === currentStep)?.key
+
+    switch (stepKey) {
+      case "basic":
         return <BasicInfoStep formData={formData} updateFormData={updateFormData} />
-      case 2:
-        return <DateTimeStep formData={formData} updateFormData={updateFormData} />
-      case 3:
+      case "location":
         return <LocationStep formData={formData} updateFormData={updateFormData} />
-      case 4:
+      case "media":
         return <MediaStep formData={formData} updateFormData={updateFormData} />
-      case 5:
+      case "tickets":
         return <TicketsStep formData={formData} updateFormData={updateFormData} />
-      case 6:
-        return <SettingsStep formData={formData} updateFormData={updateFormData} />
-      case 7:
+      case "promotional":
+        return <PromotionalStep formData={formData} updateFormData={updateFormData} />
+      case "getdp":
         return <GetDPTemplateStep formData={formData} updateFormData={updateFormData} />
-      case 8:
+      case "review":
         return <ReviewStep formData={formData} />
       default:
         return null
@@ -336,7 +427,7 @@ export function EventCreationWizard() {
       {/* Step Content */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>{steps[currentStep - 1].title}</CardTitle>
+          <CardTitle>{steps[currentStep - 1]?.title}</CardTitle>
         </CardHeader>
         <CardContent>{renderStep()}</CardContent>
       </Card>
