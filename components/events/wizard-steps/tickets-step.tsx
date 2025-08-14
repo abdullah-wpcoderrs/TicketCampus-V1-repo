@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, Ticket } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Plus, Trash2, Ticket, Copy } from "lucide-react"
 import type { EventFormData } from "../event-creation-wizard"
 
 interface TicketsStepProps {
@@ -14,7 +15,39 @@ interface TicketsStepProps {
   updateFormData: (updates: Partial<EventFormData>) => void
 }
 
+// Mock existing ticket types - in real app, fetch from API
+const existingTicketTypes = [
+  {
+    id: "existing-1",
+    name: "Early Bird",
+    description: "Limited time discount for early registrations",
+    price: 5000,
+    quantity: 100,
+    saleStartDate: "",
+    saleEndDate: "",
+  },
+  {
+    id: "existing-2",
+    name: "VIP Access",
+    description: "Premium experience with exclusive perks",
+    price: 15000,
+    quantity: 50,
+    saleStartDate: "",
+    saleEndDate: "",
+  },
+  {
+    id: "existing-3",
+    name: "Student Discount",
+    description: "Special pricing for students with valid ID",
+    price: 3000,
+    quantity: 200,
+    saleStartDate: "",
+    saleEndDate: "",
+  },
+]
+
 export function TicketsStep({ formData, updateFormData }: TicketsStepProps) {
+  const [selectedExistingTickets, setSelectedExistingTickets] = useState<string[]>([])
   const [newTicket, setNewTicket] = useState({
     name: "",
     description: "",
@@ -23,6 +56,20 @@ export function TicketsStep({ formData, updateFormData }: TicketsStepProps) {
     saleStartDate: "",
     saleEndDate: "",
   })
+
+  const addExistingTickets = () => {
+    const ticketsToAdd = existingTicketTypes
+      .filter((ticket) => selectedExistingTickets.includes(ticket.id))
+      .map((ticket) => ({
+        ...ticket,
+        id: `${ticket.id}-${Date.now()}`, // New ID to avoid conflicts
+      }))
+
+    updateFormData({
+      ticketTypes: [...formData.ticketTypes, ...ticketsToAdd],
+    })
+    setSelectedExistingTickets([])
+  }
 
   const addTicketType = () => {
     if (!newTicket.name) return
@@ -72,12 +119,57 @@ export function TicketsStep({ formData, updateFormData }: TicketsStepProps) {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">Ticket Types</h3>
-        <p className="text-sm text-gray-600">Create different ticket types with varying prices and availability</p>
+        <p className="text-sm text-gray-600">Use existing ticket types or create new ones for faster event setup</p>
       </div>
 
-      {/* Existing Ticket Types */}
+      {/* Existing Ticket Types Selection */}
+      {existingTicketTypes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center">
+              <Copy className="w-4 h-4 mr-2" />
+              Use Existing Ticket Types
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3">
+              {existingTicketTypes.map((ticket) => (
+                <div key={ticket.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <Checkbox
+                    id={ticket.id}
+                    checked={selectedExistingTickets.includes(ticket.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedExistingTickets([...selectedExistingTickets, ticket.id])
+                      } else {
+                        setSelectedExistingTickets(selectedExistingTickets.filter((id) => id !== ticket.id))
+                      }
+                    }}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">{ticket.name}</h4>
+                      <span className="text-sm font-medium text-purple-600">₦{ticket.price.toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-gray-600">{ticket.description}</p>
+                    <p className="text-xs text-gray-500">Qty: {ticket.quantity}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {selectedExistingTickets.length > 0 && (
+              <Button onClick={addExistingTickets} className="w-full">
+                Add {selectedExistingTickets.length} Selected Ticket{selectedExistingTickets.length > 1 ? "s" : ""}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Event Ticket Types */}
       {formData.ticketTypes.length > 0 && (
         <div className="space-y-4">
+          <h4 className="font-medium text-gray-900">Current Event Tickets</h4>
           {formData.ticketTypes.map((ticket) => (
             <Card key={ticket.id}>
               <CardHeader className="pb-3">
@@ -158,7 +250,7 @@ export function TicketsStep({ formData, updateFormData }: TicketsStepProps) {
         <CardHeader>
           <CardTitle className="text-base flex items-center">
             <Plus className="w-4 h-4 mr-2" />
-            Add New Ticket Type
+            Create New Ticket Type
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

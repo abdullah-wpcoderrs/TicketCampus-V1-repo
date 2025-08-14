@@ -13,6 +13,7 @@ import { TicketsStep } from "./wizard-steps/tickets-step"
 import { PromotionalStep } from "./wizard-steps/promotional-step"
 import { ReviewStep } from "./wizard-steps/review-step"
 import { GetDPTemplateStep } from "./wizard-steps/getdp-template-step"
+import { EventSuccessModal } from "./event-success-modal"
 import { useToast } from "@/hooks/use-toast"
 
 export interface EventFormData {
@@ -162,6 +163,8 @@ const getSteps = (formData: EventFormData) => {
 export function EventCreationWizard() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [createdEvent, setCreatedEvent] = useState<any>(null)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -233,6 +236,13 @@ export function EventCreationWizard() {
     setFormData((prev) => {
       const newData = { ...prev, ...updates }
 
+      if (updates.title && !updates.slug) {
+        newData.slug = updates.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+      }
+
       const newSteps = getSteps(newData)
       const currentStepKey = steps.find((s) => s.id === currentStep)?.key
       const newCurrentStep = newSteps.find((s) => s.key === currentStepKey)?.id || 1
@@ -296,7 +306,7 @@ export function EventCreationWizard() {
     if (!validateStep(currentStep)) {
       toast({
         title: "Please complete all required fields",
-        description: "Please try again later.",
+        description: "Fill in all required information before creating the event.",
         variant: "destructive",
       })
       return
@@ -305,37 +315,37 @@ export function EventCreationWizard() {
     setIsSubmitting(true)
 
     try {
-      const token = localStorage.getItem("auth_token")
       const response = await fetch("/api/events", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create event")
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to create event")
       }
 
       const event = await response.json()
-
-      toast({
-        title: "Event created successfully!",
-        description: "Your event has been created and is ready to be published.",
-      })
-
-      router.push(`/dashboard/events/${event.id}`)
+      setCreatedEvent(event)
+      setShowSuccessModal(true)
     } catch (error) {
+      console.error("Event creation error:", error)
       toast({
         title: "Error creating event",
-        description: "Please try again later.",
+        description: error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleContinueToDetails = () => {
+    setShowSuccessModal(false)
+    router.push(`/dashboard/events/${createdEvent.id}`)
   }
 
   const renderStep = () => {
@@ -364,102 +374,114 @@ export function EventCreationWizard() {
   const progress = (currentStep / steps.length) * 100
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
+    <>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center text-gray-600 hover:text-gray-900 p-0"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Event</h1>
+          <p className="text-gray-600">Follow the steps below to create your event</p>
+        </div>
+
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-medium text-gray-700">
+              Step {currentStep} of {steps.length}
+            </span>
+            <span className="text-sm text-gray-500">{Math.round(progress)}% complete</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+
+        {/* Steps Navigation */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    step.id < currentStep
+                      ? "bg-purple-600 border-purple-600 text-white"
+                      : step.id === currentStep
+                        ? "border-purple-600 text-purple-600"
+                        : "border-gray-300 text-gray-400"
+                  }`}
+                >
+                  {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-12 h-0.5 mx-2 ${step.id < currentStep ? "bg-purple-600" : "bg-gray-300"}`} />
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            {steps.map((step) => (
+              <div key={step.id} className="text-center" style={{ width: "120px" }}>
+                <p className="text-xs font-medium text-gray-900">{step.title}</p>
+                <p className="text-xs text-gray-500">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>{steps[currentStep - 1]?.title}</CardTitle>
+          </CardHeader>
+          <CardContent>{renderStep()}</CardContent>
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between">
           <Button
-            variant="ghost"
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center text-gray-600 hover:text-gray-900 p-0"
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className="flex items-center bg-transparent"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            Previous
           </Button>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Event</h1>
-        <p className="text-gray-600">Follow the steps below to create your event</p>
-      </div>
 
-      {/* Progress */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-medium text-gray-700">
-            Step {currentStep} of {steps.length}
-          </span>
-          <span className="text-sm text-gray-500">{Math.round(progress)}% complete</span>
-        </div>
-        <Progress value={progress} className="h-2" />
-      </div>
-
-      {/* Steps Navigation */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => (
-            <div key={step.id} className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  step.id < currentStep
-                    ? "bg-purple-600 border-purple-600 text-white"
-                    : step.id === currentStep
-                      ? "border-purple-600 text-purple-600"
-                      : "border-gray-300 text-gray-400"
-                }`}
-              >
-                {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
-              </div>
-              {index < steps.length - 1 && (
-                <div className={`w-12 h-0.5 mx-2 ${step.id < currentStep ? "bg-purple-600" : "bg-gray-300"}`} />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          {steps.map((step) => (
-            <div key={step.id} className="text-center" style={{ width: "120px" }}>
-              <p className="text-xs font-medium text-gray-900">{step.title}</p>
-              <p className="text-xs text-gray-500">{step.description}</p>
-            </div>
-          ))}
+          {currentStep === steps.length ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-purple-600 hover:bg-purple-700 flex items-center"
+            >
+              {isSubmitting ? "Creating..." : "Create Event"}
+              <Check className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button onClick={handleNext} className="bg-purple-600 hover:bg-purple-700 flex items-center">
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Step Content */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>{steps[currentStep - 1]?.title}</CardTitle>
-        </CardHeader>
-        <CardContent>{renderStep()}</CardContent>
-      </Card>
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
-          className="flex items-center bg-transparent"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-
-        {currentStep === steps.length ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-purple-600 hover:bg-purple-700 flex items-center"
-          >
-            {isSubmitting ? "Creating..." : "Create Event"}
-            <Check className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button onClick={handleNext} className="bg-purple-600 hover:bg-purple-700 flex items-center">
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        )}
-      </div>
-    </div>
+      {/* Success Modal */}
+      {createdEvent && (
+        <EventSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          event={createdEvent}
+          onContinue={handleContinueToDetails}
+        />
+      )}
+    </>
   )
 }

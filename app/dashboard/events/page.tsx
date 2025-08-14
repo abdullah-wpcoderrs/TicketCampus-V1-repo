@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Users, DollarSign, Plus, Search, Eye, Edit, MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 // Mock data
 const mockEvents = [
@@ -25,6 +26,7 @@ const mockEvents = [
     status: "active",
     type: "paid",
     category: "Technology",
+    slug: "tech-conference-2024",
   },
   {
     id: "2",
@@ -39,6 +41,7 @@ const mockEvents = [
     status: "upcoming",
     type: "paid",
     category: "Business & Professional",
+    slug: "marketing-workshop",
   },
   {
     id: "3",
@@ -53,6 +56,7 @@ const mockEvents = [
     status: "completed",
     type: "free",
     category: "Business & Professional",
+    slug: "startup-pitch-night",
   },
   {
     id: "4",
@@ -67,6 +71,7 @@ const mockEvents = [
     status: "draft",
     type: "free",
     category: "Arts & Culture",
+    slug: "art-exhibition-opening",
   },
 ]
 
@@ -74,6 +79,7 @@ export default function EventsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const router = useRouter()
 
   const filteredEvents = mockEvents.filter((event) => {
     const matchesSearch =
@@ -98,6 +104,10 @@ export default function EventsPage() {
       default:
         return "outline"
     }
+  }
+
+  const handleEventClick = (eventId: string) => {
+    router.push(`/dashboard/events/${eventId}`)
   }
 
   return (
@@ -159,12 +169,16 @@ export default function EventsPage() {
       {/* Events Grid */}
       <div className="grid gap-6">
         {filteredEvents.map((event) => (
-          <Card key={event.id}>
+          <Card
+            key={event.id}
+            className="hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => handleEventClick(event.id)}
+          >
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold">{event.title}</h3>
+                    <h3 className="text-lg font-semibold hover:text-purple-600 transition-colors">{event.title}</h3>
                     <Badge variant={getStatusColor(event.status)}>{event.status}</Badge>
                     <Badge variant="outline">{event.type}</Badge>
                   </div>
@@ -190,22 +204,41 @@ export default function EventsPage() {
                 </div>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm">
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/dashboard/events/${event.id}`)
+                      }}
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                       <Edit className="w-4 h-4 mr-2" />
                       Edit Event
                     </DropdownMenuItem>
-                    <DropdownMenuItem>View Analytics</DropdownMenuItem>
-                    <DropdownMenuItem>Manage Attendees</DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/dashboard/analytics/${event.id}`)
+                      }}
+                    >
+                      View Analytics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/dashboard/attendees/${event.id}`)
+                      }}
+                    >
+                      Manage Attendees
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

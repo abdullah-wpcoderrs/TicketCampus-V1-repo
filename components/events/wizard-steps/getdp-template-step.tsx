@@ -1,15 +1,14 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Upload, Eye, Palette, Type, ImageIcon, Move } from "lucide-react"
+import { Upload, Eye, ImageIcon } from "lucide-react"
 import type { EventFormData } from "../event-creation-wizard"
 
 interface GetDPTemplateStepProps {
@@ -17,40 +16,30 @@ interface GetDPTemplateStepProps {
   updateFormData: (updates: Partial<EventFormData>) => void
 }
 
-const templatePresets = [
-  {
-    id: "modern",
-    name: "Modern Gradient",
-    backgroundColor: "#3A00C1",
-    textColor: "#FFFFFF",
-    preview: "/placeholder.svg?height=300&width=200&text=Modern+Template",
-  },
-  {
-    id: "minimal",
-    name: "Clean Minimal",
-    backgroundColor: "#FFFFFF",
-    textColor: "#000000",
-    preview: "/placeholder.svg?height=300&width=200&text=Minimal+Template",
-  },
-  {
-    id: "vibrant",
-    name: "Vibrant Colors",
-    backgroundColor: "#FF6B6B",
-    textColor: "#FFFFFF",
-    preview: "/placeholder.svg?height=300&width=200&text=Vibrant+Template",
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    backgroundColor: "#2C3E50",
-    textColor: "#FFFFFF",
-    preview: "/placeholder.svg?height=300&width=200&text=Professional+Template",
-  },
+const dynamicTextOptions = [
+  { key: "{{name}}", label: "Attendee Name", example: "John Doe" },
+  { key: "{{event_title}}", label: "Event Title", example: "Tech Conference 2024" },
+  { key: "{{price}}", label: "Ticket Price", example: "₦5,000" },
+  { key: "{{date}}", label: "Event Date", example: "March 15, 2024" },
+  { key: "{{location}}", label: "Event Location", example: "Lagos, Nigeria" },
+  { key: "{{ticket_type}}", label: "Ticket Type", example: "VIP Access" },
 ]
 
-export function GetDPTemplateStep({ formData, updateFormData }: GetDPTemplateStepProps) {
-  const [activeTab, setActiveTab] = useState("design")
-  const [isDragging, setIsDragging] = useState<string | null>(null)
+const fontOptions = [
+  { value: "inter", label: "Inter", style: "font-sans" },
+  { value: "playfair", label: "Playfair Display", style: "font-serif" },
+  { value: "roboto", label: "Roboto", style: "font-sans" },
+  { value: "montserrat", label: "Montserrat", style: "font-sans" },
+  { value: "poppins", label: "Poppins", style: "font-sans" },
+  { value: "dancing-script", label: "Dancing Script", style: "font-serif" },
+]
+
+export function GetDPTemplateStep({ formData, updateFormData }: GetDPTemplateStepProps): React.ReactElement {
+  const [templateImage, setTemplateImage] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState<"photo" | "text" | "resize" | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const updateGetDPTemplate = (updates: Partial<EventFormData["getdpTemplate"]>) => {
     updateFormData({
@@ -61,20 +50,115 @@ export function GetDPTemplateStep({ formData, updateFormData }: GetDPTemplateSte
     })
   }
 
-  const handleTemplateSelect = (template: (typeof templatePresets)[0]) => {
-    updateGetDPTemplate({
-      templateId: template.id,
-      templateName: template.name,
-      backgroundColor: template.backgroundColor,
-      textColor: template.textColor,
-    })
-  }
-
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTemplateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      updateGetDPTemplate({ eventLogo: file })
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string
+        setTemplateImage(imageUrl)
+        updateGetDPTemplate({ templateImage: file })
+      }
+      reader.readAsDataURL(file)
     }
+  }
+
+  const insertDynamicText = (textKey: string) => {
+    const currentText = formData.getdpTemplate.customText || ""
+    updateGetDPTemplate({ customText: currentText + textKey })
+  }
+
+  const handlePointerDown = (type: "photo" | "text" | "resize", event: React.PointerEvent) => {
+    event.preventDefault()
+    setIsDragging(type)
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (rect) {
+      if (type === "resize") {
+        const photoRect = formData.getdpTemplate.photoPlaceholder
+        setDragOffset({
+          x: event.clientX - rect.left - photoRect.x - photoRect.width,
+          y: event.clientY - rect.top - photoRect.y - photoRect.height,
+        })
+      } else {
+        const currentPos =
+          type === "photo" ? formData.getdpTemplate.photoPlaceholder : formData.getdpTemplate.namePlaceholder
+
+        setDragOffset({
+          x: event.clientX - rect.left - currentPos.x,
+          y: event.clientY - rect.top - currentPos.y,
+        })
+      }
+    }
+  }
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
+      if (!isDragging || !canvasRef.current) return
+
+      const rect = canvasRef.current.getBoundingClientRect()
+
+      if (isDragging === "resize") {
+        const newWidth = Math.max(50, event.clientX - rect.left - formData.getdpTemplate.photoPlaceholder.x)
+        const newHeight = Math.max(50, event.clientY - rect.top - formData.getdpTemplate.photoPlaceholder.y)
+
+        updateGetDPTemplate({
+          photoPlaceholder: {
+            ...formData.getdpTemplate.photoPlaceholder,
+            width: Math.min(newWidth, rect.width - formData.getdpTemplate.photoPlaceholder.x),
+            height: Math.min(newHeight, rect.height - formData.getdpTemplate.photoPlaceholder.y),
+          },
+        })
+      } else {
+        const newX = event.clientX - rect.left - dragOffset.x
+        const newY = event.clientY - rect.top - dragOffset.y
+
+        if (isDragging === "photo") {
+          updateGetDPTemplate({
+            photoPlaceholder: {
+              ...formData.getdpTemplate.photoPlaceholder,
+              x: Math.max(0, Math.min(newX, rect.width - formData.getdpTemplate.photoPlaceholder.width)),
+              y: Math.max(0, Math.min(newY, rect.height - formData.getdpTemplate.photoPlaceholder.height)),
+            },
+          })
+        } else if (isDragging === "text") {
+          updateGetDPTemplate({
+            namePlaceholder: {
+              ...formData.getdpTemplate.namePlaceholder,
+              x: Math.max(0, Math.min(newX, rect.width - 100)),
+              y: Math.max(0, Math.min(newY, rect.height - 20)),
+            },
+          })
+        }
+      }
+    },
+    [isDragging, dragOffset, formData.getdpTemplate],
+  )
+
+  const handlePointerUp = useCallback(() => {
+    setIsDragging(null)
+  }, [])
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("pointermove", handlePointerMove)
+      document.addEventListener("pointerup", handlePointerUp)
+
+      return () => {
+        document.removeEventListener("pointermove", handlePointerMove)
+        document.removeEventListener("pointerup", handlePointerUp)
+      }
+    }
+  }, [isDragging, handlePointerMove, handlePointerUp])
+
+  const renderPreviewText = (text: string) => {
+    return text
+      .replace(/\{\{name\}\}/g, "John Doe")
+      .replace(/\{\{event_title\}\}/g, formData.title || "Your Event")
+      .replace(/\{\{price\}\}/g, "₦5,000")
+      .replace(/\{\{date\}\}/g, formData.startDate || "Event Date")
+      .replace(/\{\{location\}\}/g, formData.venueName || formData.city || "Event Location")
+      .replace(/\{\{ticket_type\}\}/g, "VIP Access")
   }
 
   return (
@@ -84,8 +168,10 @@ export function GetDPTemplateStep({ formData, updateFormData }: GetDPTemplateSte
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">GetDP Template</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">Create personalized promotional flyers for your attendees</p>
+              <CardTitle className="text-lg">Personalized Promo Flyer</CardTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                Let attendees create custom "I'm attending" flyers with their photo
+              </p>
             </div>
             <Switch
               checked={formData.getdpTemplate.enabled}
@@ -93,339 +179,256 @@ export function GetDPTemplateStep({ formData, updateFormData }: GetDPTemplateSte
             />
           </div>
         </CardHeader>
-        {formData.getdpTemplate.enabled && (
-          <CardContent>
-            <div className="text-sm text-gray-600 mb-4">
-              When enabled, attendees will be able to create personalized "I'm attending" flyers with their photo and
-              name after registering for your event.
-            </div>
-          </CardContent>
-        )}
       </Card>
 
       {formData.getdpTemplate.enabled && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Template Builder */}
-          <div>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="design" className="flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
-                  Design
-                </TabsTrigger>
-                <TabsTrigger value="content" className="flex items-center gap-2">
-                  <Type className="w-4 h-4" />
-                  Content
-                </TabsTrigger>
-                <TabsTrigger value="layout" className="flex items-center gap-2">
-                  <Move className="w-4 h-4" />
-                  Layout
-                </TabsTrigger>
-              </TabsList>
+          <div className="space-y-6">
+            {/* Template Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Upload Your Template</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleTemplateUpload}
+                    className="hidden"
+                  />
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-700 mb-2">
+                    {templateImage ? "Change Template" : "Upload Template Image"}
+                  </p>
+                  <p className="text-sm text-gray-500">PNG, JPG up to 10MB. Recommended: 1080x1080px</p>
+                </div>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="design" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Choose Template</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
-                      {templatePresets.map((template) => (
-                        <div
-                          key={template.id}
-                          className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
-                            formData.getdpTemplate.templateId === template.id
-                              ? "border-purple-600 bg-purple-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                          onClick={() => handleTemplateSelect(template)}
-                        >
-                          <div className="aspect-[3/4] bg-gray-100 rounded mb-2 flex items-center justify-center">
-                            <img
-                              src={template.preview || "/placeholder.svg"}
-                              alt={template.name}
-                              className="w-full h-full object-cover rounded"
-                            />
-                          </div>
-                          <p className="text-sm font-medium text-center">{template.name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Custom Text */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Custom Text</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Text Content</Label>
+                  <Input
+                    value={formData.getdpTemplate.customText || ""}
+                    onChange={(e) => updateGetDPTemplate({ customText: e.target.value })}
+                    placeholder="I'm attending {{event_title}}!"
+                    className="min-h-[40px]"
+                  />
+                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Colors</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="backgroundColor">Background Color</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Input
-                          id="backgroundColor"
-                          type="color"
-                          value={formData.getdpTemplate.backgroundColor}
-                          onChange={(e) => updateGetDPTemplate({ backgroundColor: e.target.value })}
-                          className="w-12 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={formData.getdpTemplate.backgroundColor}
-                          onChange={(e) => updateGetDPTemplate({ backgroundColor: e.target.value })}
-                          placeholder="#3A00C1"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="textColor">Text Color</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Input
-                          id="textColor"
-                          type="color"
-                          value={formData.getdpTemplate.textColor}
-                          onChange={(e) => updateGetDPTemplate({ textColor: e.target.value })}
-                          className="w-12 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={formData.getdpTemplate.textColor}
-                          onChange={(e) => updateGetDPTemplate({ textColor: e.target.value })}
-                          placeholder="#FFFFFF"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                <div className="space-y-2">
+                  <Label>Dynamic Text Shortcuts</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {dynamicTextOptions.map((option) => (
+                      <Button
+                        key={option.key}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => insertDynamicText(option.key)}
+                        className="justify-start text-xs"
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Click to add dynamic text that will be replaced with actual attendee data
+                  </p>
+                </div>
 
-              <TabsContent value="content" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Event Logo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                        id="logo-upload"
-                      />
-                      <label htmlFor="logo-upload" className="cursor-pointer">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">
-                          {formData.getdpTemplate.eventLogo
-                            ? formData.getdpTemplate.eventLogo.name
-                            : "Click to upload event logo"}
-                        </p>
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Custom Text</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={formData.getdpTemplate.customText}
-                      onChange={(e) => updateGetDPTemplate({ customText: e.target.value })}
-                      placeholder="I'm attending {eventTitle}!"
-                      className="min-h-[100px]"
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Font Family</Label>
+                    <Select
+                      value={formData.getdpTemplate.fontFamily || "inter"}
+                      onValueChange={(value) => updateGetDPTemplate({ fontFamily: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fontOptions.map((font) => (
+                          <SelectItem key={font.value} value={font.value}>
+                            <span className={font.style}>{font.label}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Font Size</Label>
+                    <Input
+                      type="number"
+                      value={formData.getdpTemplate.namePlaceholder.fontSize || 24}
+                      onChange={(e) =>
+                        updateGetDPTemplate({
+                          namePlaceholder: {
+                            ...formData.getdpTemplate.namePlaceholder,
+                            fontSize: Number(e.target.value) || 24,
+                          },
+                        })
+                      }
+                      min="12"
+                      max="72"
                     />
-                    <p className="text-xs text-gray-500 mt-2">
-                      Use {"{eventTitle}"} to insert the event name and {"{attendeeName}"} for the attendee's name
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                </div>
 
-              <TabsContent value="layout" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Photo Placement</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>X Position</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.photoPlaceholder.x}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              photoPlaceholder: {
-                                ...formData.getdpTemplate.photoPlaceholder,
-                                x: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Y Position</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.photoPlaceholder.y}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              photoPlaceholder: {
-                                ...formData.getdpTemplate.photoPlaceholder,
-                                y: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Width</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.photoPlaceholder.width}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              photoPlaceholder: {
-                                ...formData.getdpTemplate.photoPlaceholder,
-                                width: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Height</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.photoPlaceholder.height}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              photoPlaceholder: {
-                                ...formData.getdpTemplate.photoPlaceholder,
-                                height: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-2">
+                  <Label>Text Color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={formData.getdpTemplate.namePlaceholder.color || "#ffffff"}
+                      onChange={(e) =>
+                        updateGetDPTemplate({
+                          namePlaceholder: {
+                            ...formData.getdpTemplate.namePlaceholder,
+                            color: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                    />
+                    <Input
+                      value={formData.getdpTemplate.namePlaceholder.color || "#ffffff"}
+                      onChange={(e) =>
+                        updateGetDPTemplate({
+                          namePlaceholder: {
+                            ...formData.getdpTemplate.namePlaceholder,
+                            color: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="#ffffff"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Name Placement</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label>X Position</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.namePlaceholder.x}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              namePlaceholder: {
-                                ...formData.getdpTemplate.namePlaceholder,
-                                x: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Y Position</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.namePlaceholder.y}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              namePlaceholder: {
-                                ...formData.getdpTemplate.namePlaceholder,
-                                y: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Font Size</Label>
-                        <Input
-                          type="number"
-                          value={formData.getdpTemplate.namePlaceholder.fontSize}
-                          onChange={(e) =>
-                            updateGetDPTemplate({
-                              namePlaceholder: {
-                                ...formData.getdpTemplate.namePlaceholder,
-                                fontSize: Number.parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                {/* Photo Size Controls */}
+                <div className="space-y-2">
+                  <Label>Photo Size</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Width"
+                      value={formData.getdpTemplate.photoPlaceholder.width}
+                      onChange={(e) =>
+                        updateGetDPTemplate({
+                          photoPlaceholder: {
+                            ...formData.getdpTemplate.photoPlaceholder,
+                            width: Number(e.target.value) || 100,
+                          },
+                        })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Height"
+                      value={formData.getdpTemplate.photoPlaceholder.height}
+                      onChange={(e) =>
+                        updateGetDPTemplate({
+                          photoPlaceholder: {
+                            ...formData.getdpTemplate.photoPlaceholder,
+                            height: Number(e.target.value) || 100,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Preview */}
+          {/* Real-time Preview */}
           <div>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  Preview
+                  Live Preview
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-[3/4] border rounded-lg overflow-hidden relative">
-                  <div
-                    className="w-full h-full flex flex-col items-center justify-center text-center p-4"
-                    style={{
-                      backgroundColor: formData.getdpTemplate.backgroundColor,
-                      color: formData.getdpTemplate.textColor,
-                    }}
-                  >
-                    {/* Event Logo */}
-                    {formData.getdpTemplate.eventLogo && (
-                      <div className="mb-4">
-                        <ImageIcon className="w-12 h-12 opacity-50" />
+                <div
+                  ref={canvasRef}
+                  className="aspect-square border rounded-lg overflow-hidden relative bg-gray-100 select-none"
+                  style={{ maxWidth: "400px", margin: "0 auto", touchAction: "none" }}
+                >
+                  {templateImage ? (
+                    <>
+                      {/* Template Background */}
+                      <img
+                        src={templateImage || "/placeholder.svg"}
+                        alt="Template"
+                        className="w-full h-full object-cover pointer-events-none"
+                        draggable={false}
+                      />
+
+                      <div
+                        className="absolute border-2 border-dashed border-white bg-white/20 rounded-full flex items-center justify-center cursor-move touch-none"
+                        style={{
+                          left: `${formData.getdpTemplate.photoPlaceholder.x}px`,
+                          top: `${formData.getdpTemplate.photoPlaceholder.y}px`,
+                          width: `${formData.getdpTemplate.photoPlaceholder.width}px`,
+                          height: `${formData.getdpTemplate.photoPlaceholder.height}px`,
+                        }}
+                        onPointerDown={(e) => handlePointerDown("photo", e)}
+                      >
+                        <ImageIcon className="w-6 h-6 text-white/70" />
+
+                        <div
+                          className="absolute bottom-0 right-0 w-4 h-4 bg-white border border-gray-300 rounded-full cursor-se-resize"
+                          onPointerDown={(e) => {
+                            e.stopPropagation()
+                            handlePointerDown("resize", e)
+                          }}
+                        />
                       </div>
-                    )}
 
-                    {/* Photo Placeholder */}
-                    <div
-                      className="bg-white/20 rounded-full flex items-center justify-center mb-4"
-                      style={{
-                        width: `${formData.getdpTemplate.photoPlaceholder.width}px`,
-                        height: `${formData.getdpTemplate.photoPlaceholder.height}px`,
-                      }}
-                    >
-                      <ImageIcon className="w-8 h-8 opacity-50" />
+                      {/* Enhanced Text Placeholder */}
+                      {formData.getdpTemplate.customText && (
+                        <div
+                          className="absolute cursor-move font-bold text-center select-none touch-none"
+                          style={{
+                            left: `${formData.getdpTemplate.namePlaceholder.x}px`,
+                            top: `${formData.getdpTemplate.namePlaceholder.y}px`,
+                            fontSize: `${formData.getdpTemplate.namePlaceholder.fontSize}px`,
+                            fontFamily: formData.getdpTemplate.fontFamily || "Inter",
+                            color: formData.getdpTemplate.namePlaceholder.color || "#ffffff",
+                            textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+                          }}
+                          onPointerDown={(e) => handlePointerDown("text", e)}
+                        >
+                          {renderPreviewText(formData.getdpTemplate.customText)}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="text-center">
+                        <ImageIcon className="w-16 h-16 mx-auto mb-4" />
+                        <p>Upload a template to see preview</p>
+                      </div>
                     </div>
-
-                    {/* Custom Text */}
-                    <div className="mb-2">
-                      <p className="font-semibold">
-                        {formData.getdpTemplate.customText
-                          .replace("{eventTitle}", formData.title || "Your Event")
-                          .replace("{attendeeName}", "John Doe")}
-                      </p>
-                    </div>
-
-                    {/* Event Details */}
-                    <div className="text-sm opacity-80">
-                      <p>{formData.startDate}</p>
-                      <p>{formData.venueName || formData.city}</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  This is how the personalized flyer will look for attendees
+                {/* Updated Instruction Text */}
+                <p className="text-xs text-gray-500 mt-3 text-center">
+                  Drag elements to position them. Use the resize handle on the photo placeholder to adjust size.
                 </p>
               </CardContent>
             </Card>

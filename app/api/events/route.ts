@@ -23,32 +23,58 @@ export async function POST(request: NextRequest) {
         title: eventData.title,
         description: eventData.description,
         category: eventData.category,
+        slug: eventData.slug || eventData.title.toLowerCase().replace(/\s+/g, "-"),
         start_date: eventData.startDate,
         end_date: eventData.endDate,
         start_time: eventData.startTime,
         end_time: eventData.endTime,
         timezone: eventData.timezone,
-        location_type: eventData.locationType,
+        is_online: eventData.isOnline,
         venue_name: eventData.venueName,
         venue_address: eventData.venueAddress,
-        online_link: eventData.onlineLink,
+        city: eventData.city,
+        state: eventData.state,
+        country: eventData.country,
+        meeting_link: eventData.meetingLink,
         banner_image: eventData.bannerImage,
         gallery_images: eventData.galleryImages,
-        max_attendees: eventData.maxAttendees,
-        is_published: false,
+        max_capacity: eventData.maxCapacity,
+        is_published: true,
         allow_guest_registration: eventData.allowGuestRegistration || false,
-        require_approval: eventData.requireApproval || false,
-        send_reminders: eventData.sendReminders || true,
+        requires_approval: eventData.requiresApproval || false,
         custom_fields: eventData.customFields || [],
-        social_links: eventData.socialLinks || {},
-        organizer_info: eventData.organizerInfo || {},
+        event_type: eventData.eventType,
+        meta_description: eventData.metaDescription,
+        enable_promotions: eventData.enablePromotions || false,
+        promotion_channels: eventData.promotionChannels || [],
+        enable_getdp: eventData.enableGetDP || false,
+        getdp_template: eventData.getdpTemplate || null,
+        whatsapp_messages: eventData.whatsappMessages || null,
+        email_messages: eventData.emailMessages || null,
+        auto_send_confirmation: eventData.autoSendConfirmation || true,
+        auto_send_reminders: eventData.autoSendReminders || false,
+        reminder_timing: eventData.reminderTiming || "24h",
       })
       .select()
       .single()
 
     if (error) {
       console.error("Event creation error:", error)
-      return NextResponse.json({ message: "Failed to create event" }, { status: 500 })
+      return NextResponse.json({ message: "Failed to create event", error: error.message }, { status: 500 })
+    }
+
+    if (eventData.ticketTypes && eventData.ticketTypes.length > 0) {
+      const ticketInserts = eventData.ticketTypes.map((ticket: any) => ({
+        event_id: newEvent.id,
+        name: ticket.name,
+        description: ticket.description,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        sale_start_date: ticket.saleStartDate,
+        sale_end_date: ticket.saleEndDate,
+      }))
+
+      await supabase.from("ticket_types").insert(ticketInserts)
     }
 
     return NextResponse.json(newEvent)
