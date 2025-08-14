@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, MapPin, Users, Search, Filter } from "lucide-react"
 import Link from "next/link"
+import { SiteHeader } from "@/components/shared/site-header"
 
 // Mock public events data
 const mockPublicEvents = [
@@ -174,27 +175,7 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">Ticket</span>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-purple-600 hover:bg-purple-700">Get Started</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
@@ -271,7 +252,7 @@ export default function EventsPage() {
         {filteredEvents.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
-              <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow rounded-md">
                 <div className="aspect-video relative">
                   <img
                     src={event.bannerImage || "/placeholder.svg"}
@@ -312,7 +293,7 @@ export default function EventsPage() {
                         <p className="text-sm font-medium">{event.organizer}</p>
                       </div>
                       <Link href={`/events/${event.slug}`}>
-                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                        <Button size="sm" className="bg-[#3A00C1] hover:bg-[#2A0091] rounded-md">
                           View Details
                         </Button>
                       </Link>

@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { EventRegistrationModal } from "@/components/events/event-registration-modal"
+import { SiteHeader } from "@/components/shared/site-header"
 
 // Mock event data - in real app, fetch based on slug
 const mockEvent = {
@@ -172,26 +173,7 @@ export default function EventDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">ThePlace</span>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/events">
-                <Button variant="ghost">Browse Events</Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="ghost">Sign In</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <SiteHeader showCreateEvent={false} />
 
       <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
@@ -403,7 +385,10 @@ export default function EventDetailPage() {
                       <p className="text-2xl font-bold text-green-600">Free Event</p>
                       <p className="text-sm text-gray-600">No payment required</p>
                     </div>
-                    <Button onClick={() => handleRegister()} className="w-full bg-purple-600 hover:bg-purple-700">
+                    <Button
+                      onClick={() => handleRegister()}
+                      className="w-full bg-[#3A00C1] hover:bg-[#2A0091] rounded-md"
+                    >
                       <Ticket className="w-4 h-4 mr-2" />
                       Register Now
                     </Button>
@@ -411,7 +396,7 @@ export default function EventDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     {event.ticketTypes.map((ticket) => (
-                      <div key={ticket.id} className="border rounded-lg p-4">
+                      <div key={ticket.id} className="border rounded-md p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium">{ticket.name}</h4>
                           <span className="font-bold">₦{ticket.price.toLocaleString()}</span>
@@ -425,7 +410,7 @@ export default function EventDetailPage() {
                             size="sm"
                             onClick={() => handleRegister(ticket.id)}
                             disabled={ticket.sold >= ticket.quantity}
-                            className="bg-purple-600 hover:bg-purple-700"
+                            className="bg-[#3A00C1] hover:bg-[#2A0091] rounded-md"
                           >
                             {ticket.sold >= ticket.quantity ? "Sold Out" : "Select"}
                           </Button>

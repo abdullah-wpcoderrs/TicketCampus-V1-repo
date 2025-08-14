@@ -217,117 +217,136 @@ export default function EventRegistrationPage() {
             <CardDescription>Fill out the form below to register for this event</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
               {/* Basic Information */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="attendee_name">Full Name *</Label>
-                  <Input
-                    id="attendee_name"
-                    value={formData.attendee_name}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, attendee_name: e.target.value }))}
-                    required
-                  />
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="attendee_name">Full Name *</Label>
+                    <Input
+                      id="attendee_name"
+                      value={formData.attendee_name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, attendee_name: e.target.value }))}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="attendee_email">Email Address *</Label>
+                    <Input
+                      id="attendee_email"
+                      type="email"
+                      value={formData.attendee_email}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, attendee_email: e.target.value }))}
+                      required
+                      className="h-11"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="attendee_email">Email Address *</Label>
-                  <Input
-                    id="attendee_email"
-                    type="email"
-                    value={formData.attendee_email}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, attendee_email: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
 
-              <div>
-                <Label htmlFor="attendee_phone">Phone Number</Label>
-                <Input
-                  id="attendee_phone"
-                  value={formData.attendee_phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, attendee_phone: e.target.value }))}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="attendee_phone">Phone Number</Label>
+                  <Input
+                    id="attendee_phone"
+                    value={formData.attendee_phone}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, attendee_phone: e.target.value }))}
+                    className="h-11"
+                  />
+                </div>
               </div>
 
               {/* Ticket Selection */}
               {ticketTypes.length > 0 && (
-                <div>
-                  <Label>Select Ticket Type</Label>
-                  <Select
-                    value={formData.ticket_type_id}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, ticket_type_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a ticket type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ticketTypes.map((ticket) => (
-                        <SelectItem key={ticket.id} value={ticket.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{ticket.name}</span>
-                            <span className="ml-2 font-semibold">
-                              {ticket.price > 0 ? `₦${ticket.price.toLocaleString()}` : "Free"}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedTicket && <p className="text-sm text-gray-600 mt-1">{selectedTicket.description}</p>}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Ticket Selection</h3>
+                  <div className="space-y-2">
+                    <Label>Select Ticket Type</Label>
+                    <Select
+                      value={formData.ticket_type_id}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, ticket_type_id: value }))}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Choose a ticket type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ticketTypes.map((ticket) => (
+                          <SelectItem key={ticket.id} value={ticket.id}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{ticket.name}</span>
+                              <span className="ml-2 font-semibold">
+                                {ticket.price > 0 ? `₦${ticket.price.toLocaleString()}` : "Free"}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedTicket && <p className="text-sm text-gray-600 mt-2">{selectedTicket.description}</p>}
+                  </div>
                 </div>
               )}
 
               {/* Custom Fields */}
               {event.custom_fields && event.custom_fields.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Additional Information</h3>
-                  {event.custom_fields.map((field: any) => (
-                    <div key={field.id}>
-                      <Label htmlFor={field.id}>
-                        {field.label} {field.required && "*"}
-                      </Label>
-                      {field.type === "text" && (
-                        <Input
-                          id={field.id}
-                          value={formData.custom_field_responses[field.id] || ""}
-                          onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                          required={field.required}
-                        />
-                      )}
-                      {field.type === "textarea" && (
-                        <Textarea
-                          id={field.id}
-                          value={formData.custom_field_responses[field.id] || ""}
-                          onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                          required={field.required}
-                        />
-                      )}
-                      {field.type === "select" && (
-                        <Select
-                          value={formData.custom_field_responses[field.id] || ""}
-                          onValueChange={(value) => handleCustomFieldChange(field.id, value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={`Select ${field.label}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options?.map((option: string) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
+                  <div className="space-y-6">
+                    {event.custom_fields.map((field: any) => (
+                      <div key={field.id} className="space-y-2">
+                        <Label htmlFor={field.id}>
+                          {field.label} {field.required && "*"}
+                        </Label>
+                        {field.type === "text" && (
+                          <Input
+                            id={field.id}
+                            value={formData.custom_field_responses[field.id] || ""}
+                            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                            required={field.required}
+                            className="h-11"
+                          />
+                        )}
+                        {field.type === "textarea" && (
+                          <Textarea
+                            id={field.id}
+                            value={formData.custom_field_responses[field.id] || ""}
+                            onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
+                            required={field.required}
+                            className="min-h-[100px]"
+                          />
+                        )}
+                        {field.type === "select" && (
+                          <Select
+                            value={formData.custom_field_responses[field.id] || ""}
+                            onValueChange={(value) => handleCustomFieldChange(field.id, value)}
+                          >
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder={`Select ${field.label}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options?.map((option: string) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <Button type="submit" disabled={submitting} className="w-full bg-[#3A00C1] hover:bg-[#3A00C1]/90">
-                {submitting ? "Registering..." : "Register for Event"}
-              </Button>
+              <div className="pt-4">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-[#3A00C1] hover:bg-[#3A00C1]/90 h-12 text-lg"
+                >
+                  {submitting ? "Registering..." : "Register for Event"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

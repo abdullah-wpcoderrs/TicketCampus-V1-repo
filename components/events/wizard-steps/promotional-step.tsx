@@ -9,13 +9,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, MessageSquare, Mail, Clock, Users } from "lucide-react"
+import { Plus, Trash2, MessageSquare, Mail, Clock, Users, Eye, Copy } from "lucide-react"
 import type { EventFormData } from "../event-creation-wizard"
 
 interface PromotionalStepProps {
   formData: EventFormData
   updateFormData: (updates: Partial<EventFormData>) => void
 }
+
+const DYNAMIC_VARIABLES = [
+  { key: "{name}", label: "Attendee Name", description: "The registered attendee's name" },
+  { key: "{event_title}", label: "Event Title", description: "The name of your event" },
+  { key: "{event_date}", label: "Event Date", description: "The date of your event" },
+  { key: "{event_time}", label: "Event Time", description: "The start time of your event" },
+  { key: "{location}", label: "Event Location", description: "Where the event is taking place" },
+  { key: "{ticket_type}", label: "Ticket Type", description: "The type of ticket purchased" },
+  { key: "{price}", label: "Ticket Price", description: "The price paid for the ticket" },
+  { key: "{organizer_name}", label: "Organizer Name", description: "Your name as the organizer" },
+  { key: "{registration_id}", label: "Registration ID", description: "Unique registration reference" },
+  { key: "{event_url}", label: "Event URL", description: "Link to the event page" },
+  { key: "{qr_code}", label: "QR Code", description: "QR code for the ticket" },
+  { key: "{days_until_event}", label: "Days Until Event", description: "Number of days remaining" },
+]
+
+const REMINDER_TIMINGS = [
+  { value: "15m", label: "15 minutes before" },
+  { value: "30m", label: "30 minutes before" },
+  { value: "1h", label: "1 hour before" },
+  { value: "2h", label: "2 hours before" },
+  { value: "3h", label: "3 hours before" },
+  { value: "6h", label: "6 hours before" },
+  { value: "12h", label: "12 hours before" },
+  { value: "24h", label: "24 hours before" },
+  { value: "48h", label: "48 hours before" },
+  { value: "72h", label: "3 days before" },
+  { value: "1w", label: "1 week before" },
+  { value: "2w", label: "2 weeks before" },
+]
 
 export function PromotionalStep({ formData, updateFormData }: PromotionalStepProps) {
   const [newField, setNewField] = useState({
@@ -24,6 +54,55 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
     required: false,
     options: [] as string[],
   })
+  const [activeMessageType, setActiveMessageType] = useState<"whatsapp" | "email">("whatsapp")
+  const [activeTemplate, setActiveTemplate] = useState<"confirmation" | "reminder">("confirmation")
+  const [showPreview, setShowPreview] = useState(false)
+
+  const insertVariable = (
+    variable: string,
+    messageType: "whatsapp" | "email",
+    templateType: "confirmation" | "reminder",
+  ) => {
+    if (messageType === "whatsapp") {
+      const currentMessage =
+        templateType === "confirmation"
+          ? formData.whatsappMessages?.confirmation || ""
+          : formData.whatsappMessages?.reminder || ""
+
+      const updatedMessage = currentMessage + variable
+
+      updateFormData({
+        whatsappMessages: {
+          ...formData.whatsappMessages,
+          [templateType]: updatedMessage,
+        },
+      })
+    } else {
+      if (templateType === "confirmation") {
+        const currentBody = formData.emailMessages?.body || ""
+        updateFormData({
+          emailMessages: {
+            ...formData.emailMessages,
+            body: currentBody + variable,
+          },
+        })
+      }
+    }
+  }
+
+  const previewMessage = (template: string) => {
+    return template
+      .replace(/{name}/g, "John Doe")
+      .replace(/{event_title}/g, formData.title || "Your Event")
+      .replace(/{event_date}/g, formData.startDate || "Event Date")
+      .replace(/{event_time}/g, formData.startTime || "Event Time")
+      .replace(/{location}/g, formData.location || "Event Location")
+      .replace(/{ticket_type}/g, "General Admission")
+      .replace(/{price}/g, "₦5,000")
+      .replace(/{organizer_name}/g, "Event Organizer")
+      .replace(/{registration_id}/g, "REG-12345")
+      .replace(/{days_until_event}/g, "3")
+  }
 
   const addCustomField = () => {
     if (!newField.label) return
@@ -75,6 +154,31 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
         </TabsList>
 
         <TabsContent value="messages" className="space-y-6">
+          {/* Dynamic Variables Panel */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Dynamic Variables</CardTitle>
+              <p className="text-sm text-gray-600">Click any variable to insert it into your message templates</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {DYNAMIC_VARIABLES.map((variable) => (
+                  <Button
+                    key={variable.key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => insertVariable(variable.key, activeMessageType, activeTemplate)}
+                    className="justify-start text-xs h-8"
+                    title={variable.description}
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    {variable.key}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* WhatsApp Messages */}
           {formData.promotionChannels?.includes("whatsapp") && (
             <Card>
@@ -84,39 +188,85 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
                   WhatsApp Messages
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Registration Confirmation Message</Label>
-                  <Textarea
-                    value={formData.whatsappMessages?.confirmation || ""}
-                    onChange={(e) =>
-                      updateFormData({
-                        whatsappMessages: {
-                          ...formData.whatsappMessages,
-                          confirmation: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Hi {name}! Thanks for registering for {event_title}. Your ticket is confirmed for {event_date}."
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Event Reminder Message</Label>
-                  <Textarea
-                    value={formData.whatsappMessages?.reminder || ""}
-                    onChange={(e) =>
-                      updateFormData({
-                        whatsappMessages: {
-                          ...formData.whatsappMessages,
-                          reminder: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Don't forget! {event_title} is tomorrow at {event_time}. See you there!"
-                    rows={3}
-                  />
-                </div>
+              <CardContent className="space-y-6">
+                <Tabs
+                  defaultValue="confirmation"
+                  onValueChange={(value) => {
+                    setActiveMessageType("whatsapp")
+                    setActiveTemplate(value as "confirmation" | "reminder")
+                  }}
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="confirmation">Confirmation</TabsTrigger>
+                    <TabsTrigger value="reminder">Reminder</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="confirmation" className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Registration Confirmation Message</Label>
+                        <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={formData.whatsappMessages?.confirmation || ""}
+                        onChange={(e) =>
+                          updateFormData({
+                            whatsappMessages: {
+                              ...formData.whatsappMessages,
+                              confirmation: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Hi {name}! 🎉 Thanks for registering for {event_title}. Your {ticket_type} ticket is confirmed for {event_date} at {event_time}. Location: {location}. See you there!"
+                        rows={4}
+                        className="resize-none"
+                      />
+                      {showPreview && formData.whatsappMessages?.confirmation && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-sm font-medium text-green-800 mb-1">Preview:</p>
+                          <p className="text-sm text-green-700">
+                            {previewMessage(formData.whatsappMessages.confirmation)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="reminder" className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Event Reminder Message</Label>
+                        <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={formData.whatsappMessages?.reminder || ""}
+                        onChange={(e) =>
+                          updateFormData({
+                            whatsappMessages: {
+                              ...formData.whatsappMessages,
+                              reminder: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="⏰ Reminder: {event_title} is in {days_until_event} days! Don't forget - {event_date} at {event_time}. Location: {location}. We can't wait to see you there!"
+                        rows={4}
+                        className="resize-none"
+                      />
+                      {showPreview && formData.whatsappMessages?.reminder && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-sm font-medium text-green-800 mb-1">Preview:</p>
+                          <p className="text-sm text-green-700">{previewMessage(formData.whatsappMessages.reminder)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           )}
@@ -143,11 +293,25 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
                         },
                       })
                     }
-                    placeholder="Your ticket for {event_title} is confirmed!"
+                    placeholder="🎟️ Your ticket for {event_title} is confirmed!"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Email Body</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Email Body</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setActiveMessageType("email")
+                        setActiveTemplate("confirmation")
+                        setShowPreview(!showPreview)
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Preview
+                    </Button>
+                  </div>
                   <Textarea
                     value={formData.emailMessages?.body || ""}
                     onChange={(e) =>
@@ -158,9 +322,34 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
                         },
                       })
                     }
-                    placeholder="Dear {name}, Thank you for registering for {event_title}..."
-                    rows={6}
+                    placeholder="Dear {name},
+
+Thank you for registering for {event_title}! 
+
+Event Details:
+📅 Date: {event_date}
+⏰ Time: {event_time}
+📍 Location: {location}
+🎫 Ticket Type: {ticket_type}
+💰 Price: {price}
+
+Your registration ID is: {registration_id}
+
+We're excited to see you there!
+
+Best regards,
+{organizer_name}"
+                    rows={8}
+                    className="resize-none font-mono text-sm"
                   />
+                  {showPreview && formData.emailMessages?.body && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800 mb-2">Preview:</p>
+                      <div className="text-sm text-blue-700 whitespace-pre-line">
+                        {previewMessage(formData.emailMessages.body)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -172,7 +361,7 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
             <CardHeader>
               <CardTitle className="text-base">Message Automation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Send Confirmation Messages</Label>
@@ -196,9 +385,9 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
               </div>
 
               {formData.autoSendReminders && (
-                <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
+                <div className="ml-6 space-y-4 border-l-2 border-gray-200 pl-6">
                   <div className="space-y-2">
-                    <Label>Reminder Timing</Label>
+                    <Label>Primary Reminder Timing</Label>
                     <Select
                       value={formData.reminderTiming || "24h"}
                       onValueChange={(value) => updateFormData({ reminderTiming: value })}
@@ -207,14 +396,50 @@ export function PromotionalStep({ formData, updateFormData }: PromotionalStepPro
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1h">1 hour before</SelectItem>
-                        <SelectItem value="3h">3 hours before</SelectItem>
-                        <SelectItem value="24h">24 hours before</SelectItem>
-                        <SelectItem value="48h">48 hours before</SelectItem>
-                        <SelectItem value="1w">1 week before</SelectItem>
+                        {REMINDER_TIMINGS.map((timing) => (
+                          <SelectItem key={timing.value} value={timing.value}>
+                            {timing.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Send Multiple Reminders</Label>
+                      <p className="text-sm text-gray-500">Send additional reminders at different intervals</p>
+                    </div>
+                    <Switch
+                      checked={formData.multipleReminders || false}
+                      onCheckedChange={(checked) => updateFormData({ multipleReminders: checked })}
+                    />
+                  </div>
+
+                  {formData.multipleReminders && (
+                    <div className="space-y-3 pl-4 border-l border-gray-100">
+                      <Label className="text-sm">Additional Reminder Times</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["1w", "48h", "3h"].map((timing) => {
+                          const isSelected = formData.additionalReminders?.includes(timing)
+                          return (
+                            <Button
+                              key={timing}
+                              variant={isSelected ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                const current = formData.additionalReminders || []
+                                const updated = isSelected ? current.filter((t) => t !== timing) : [...current, timing]
+                                updateFormData({ additionalReminders: updated })
+                              }}
+                            >
+                              {REMINDER_TIMINGS.find((t) => t.value === timing)?.label}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
