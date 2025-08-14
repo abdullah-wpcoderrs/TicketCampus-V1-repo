@@ -114,7 +114,7 @@ export function BasicInfoStep({ formData, updateFormData }: BasicInfoStepProps) 
       <div className="space-y-2">
         <Label htmlFor="slug">Event URL Slug</Label>
         <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-2">theplace.com/events/</span>
+          <span className="text-sm text-gray-500 mr-2">ticket.com/events/</span>
           <Input
             id="slug"
             value={formData.slug}

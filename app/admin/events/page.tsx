@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, Edit, Trash2, MoreHorizontal } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Eye, Edit, Trash2, MoreHorizontal, Users, BarChart3 } from "lucide-react"
+import Link from "next/link"
 
 export default function AdminEvents() {
   const events = [
@@ -23,7 +25,15 @@ export default function AdminEvents() {
       attendees: 0,
       revenue: "₦0",
     },
-    // Add more mock events...
+    {
+      id: 3,
+      title: "Startup Pitch Night",
+      organizer: "Mike Johnson",
+      date: "2024-03-25",
+      status: "published",
+      attendees: 75,
+      revenue: "₦225,000",
+    },
   ]
 
   return (
@@ -66,9 +76,27 @@ export default function AdminEvents() {
                   <Button variant="outline" size="sm">
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/attendees/${event.id}`} className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          View Attendees
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/analytics/${event.id}`} className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Event Analytics
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}

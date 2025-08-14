@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle } from "lucide-react"
+import Image from "next/image"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -81,7 +82,16 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-purple-600">Join ThePlace</CardTitle>
+          <div className="flex justify-center mb-4">
+            <Image
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20Project%20-%20New%20Group-woZ5DijlWxWDR7kaScHaUxptjShI69.png"
+              alt="Ticket Campus"
+              width={120}
+              height={40}
+              className="h-10 w-auto"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold text-purple-600">Join Ticket Campus</CardTitle>
           <CardDescription>Create your account to start managing events</CardDescription>
         </CardHeader>
         <CardContent>

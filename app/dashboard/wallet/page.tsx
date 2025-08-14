@@ -63,6 +63,23 @@ export default function WalletPage() {
   const { user } = useAuth()
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [withdrawalMethods, setWithdrawalMethods] = useState([
+    {
+      id: "1",
+      type: "bank",
+      bankName: "First Bank of Nigeria",
+      accountNumber: "0123456789",
+      accountName: "John Doe",
+      isDefault: true,
+      dateAdded: "2024-03-01T10:00:00Z",
+    },
+  ])
+  const [showAddMethod, setShowAddMethod] = useState(false)
+  const [newMethod, setNewMethod] = useState({
+    bankName: "",
+    accountNumber: "",
+    accountName: "",
+  })
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || Number(withdrawAmount) <= 0) return
@@ -74,6 +91,35 @@ export default function WalletPage() {
       setWithdrawAmount("")
       // Show success message
     }, 2000)
+  }
+
+  const handleAddWithdrawalMethod = async () => {
+    if (!newMethod.bankName || !newMethod.accountNumber || !newMethod.accountName) return
+
+    const newWithdrawalMethod = {
+      id: Date.now().toString(),
+      type: "bank",
+      ...newMethod,
+      isDefault: withdrawalMethods.length === 0,
+      dateAdded: new Date().toISOString(),
+    }
+
+    setWithdrawalMethods([...withdrawalMethods, newWithdrawalMethod])
+    setNewMethod({ bankName: "", accountNumber: "", accountName: "" })
+    setShowAddMethod(false)
+  }
+
+  const setDefaultMethod = (methodId: string) => {
+    setWithdrawalMethods((methods) =>
+      methods.map((method) => ({
+        ...method,
+        isDefault: method.id === methodId,
+      })),
+    )
+  }
+
+  const removeMethod = (methodId: string) => {
+    setWithdrawalMethods((methods) => methods.filter((method) => method.id !== methodId))
   }
 
   const totalCredits = mockTransactions
@@ -131,6 +177,7 @@ export default function WalletPage() {
         <TabsList>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+          <TabsTrigger value="settings">Withdrawal Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4">
@@ -182,6 +229,30 @@ export default function WalletPage() {
               <CardDescription>Transfer money to your bank account</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {withdrawalMethods.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Withdrawal Method</Label>
+                  <div className="p-3 border rounded-lg bg-gray-50">
+                    {(() => {
+                      const defaultMethod = withdrawalMethods.find((m) => m.isDefault)
+                      return defaultMethod ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{defaultMethod.bankName}</p>
+                            <p className="text-sm text-gray-600">
+                              {defaultMethod.accountNumber} • {defaultMethod.accountName}
+                            </p>
+                          </div>
+                          <Badge>Default</Badge>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No default withdrawal method set</p>
+                      )
+                    })()}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="amount">Withdrawal Amount</Label>
                 <Input
@@ -208,12 +279,139 @@ export default function WalletPage() {
 
               <Button
                 onClick={handleWithdraw}
-                disabled={!withdrawAmount || Number(withdrawAmount) <= 0 || isWithdrawing}
+                disabled={
+                  !withdrawAmount || Number(withdrawAmount) <= 0 || isWithdrawing || withdrawalMethods.length === 0
+                }
                 className="w-full"
               >
                 <CreditCard className="w-4 h-4 mr-2" />
                 {isWithdrawing ? "Processing..." : "Withdraw Funds"}
               </Button>
+
+              {withdrawalMethods.length === 0 && (
+                <p className="text-sm text-red-600 text-center">
+                  Please add a withdrawal method in the Withdrawal Settings tab before making a withdrawal.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Withdrawal Methods</CardTitle>
+                <CardDescription>Manage your bank accounts and payment methods</CardDescription>
+              </div>
+              <Button onClick={() => setShowAddMethod(true)} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Method
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {withdrawalMethods.length === 0 ? (
+                <div className="text-center py-8">
+                  <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No withdrawal methods</h3>
+                  <p className="text-gray-600 mb-4">Add a bank account to receive your earnings</p>
+                  <Button onClick={() => setShowAddMethod(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Your First Method
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {withdrawalMethods.map((method) => (
+                    <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-2 bg-blue-100 rounded-full">
+                          <CreditCard className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{method.bankName}</p>
+                          <p className="text-sm text-gray-600">
+                            {method.accountNumber} • {method.accountName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Added {new Date(method.dateAdded).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {method.isDefault && <Badge>Default</Badge>}
+                        {!method.isDefault && (
+                          <Button variant="outline" size="sm" onClick={() => setDefaultMethod(method.id)}>
+                            Set Default
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeMethod(method.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showAddMethod && (
+                <Card className="border-2 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Add Bank Account</CardTitle>
+                    <CardDescription>Enter your bank account details for withdrawals</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bankName">Bank Name</Label>
+                      <Input
+                        id="bankName"
+                        placeholder="e.g., First Bank of Nigeria"
+                        value={newMethod.bankName}
+                        onChange={(e) => setNewMethod({ ...newMethod, bankName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="accountNumber">Account Number</Label>
+                      <Input
+                        id="accountNumber"
+                        placeholder="Enter 10-digit account number"
+                        value={newMethod.accountNumber}
+                        onChange={(e) => setNewMethod({ ...newMethod, accountNumber: e.target.value })}
+                        maxLength={10}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="accountName">Account Name</Label>
+                      <Input
+                        id="accountName"
+                        placeholder="Account holder's full name"
+                        value={newMethod.accountName}
+                        onChange={(e) => setNewMethod({ ...newMethod, accountName: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button onClick={handleAddWithdrawalMethod} className="flex-1">
+                        Add Account
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddMethod(false)
+                          setNewMethod({ bankName: "", accountNumber: "", accountName: "" })
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

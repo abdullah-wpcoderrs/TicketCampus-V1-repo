@@ -11,8 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bell, Calendar, Plus } from "lucide-react"
+import { Bell, Plus } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 export function DashboardHeader() {
   const { user, logout } = useAuth()
@@ -22,16 +23,21 @@ export function DashboardHeader() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">ThePlace</span>
+            <Link href="/" className="cursor-pointer">
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20Project%20-%20New%20Group-woZ5DijlWxWDR7kaScHaUxptjShI69.png"
+                alt="Ticket Campus"
+                width={140}
+                height={50}
+                className="h-10 w-auto cursor-pointer"
+              />
+            </Link>
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
           <Link href="/create-event">
-            <Button className="bg-purple-600 hover:bg-purple-700">
+            <Button className="bg-[#3A00C1] hover:bg-[#2A0091]">
               <Plus className="w-4 h-4 mr-2" />
               Create Event
             </Button>

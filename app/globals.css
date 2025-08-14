@@ -1,7 +1,14 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+
+/* Added Anek Tamil font variable for body text */
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-body: var(--font-anek-tamil);
+}
 
 :root {
   --background: oklch(1 0 0);

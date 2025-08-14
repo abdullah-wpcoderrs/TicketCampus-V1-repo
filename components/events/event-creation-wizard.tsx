@@ -13,6 +13,7 @@ import { MediaStep } from "./wizard-steps/media-step"
 import { TicketsStep } from "./wizard-steps/tickets-step"
 import { SettingsStep } from "./wizard-steps/settings-step"
 import { ReviewStep } from "./wizard-steps/review-step"
+import { GetDPTemplateStep } from "./wizard-steps/getdp-template-step"
 import { useToast } from "@/hooks/use-toast"
 
 export interface EventFormData {
@@ -68,6 +69,28 @@ export interface EventFormData {
   // SEO
   slug: string
   metaDescription: string
+
+  // GetDP Template
+  getdpTemplate: {
+    enabled: boolean
+    templateId: string
+    templateName: string
+    backgroundColor: string
+    textColor: string
+    eventLogo: File | null
+    customText: string
+    photoPlaceholder: {
+      x: number
+      y: number
+      width: number
+      height: number
+    }
+    namePlaceholder: {
+      x: number
+      y: number
+      fontSize: number
+    }
+  }
 }
 
 const steps = [
@@ -77,7 +100,8 @@ const steps = [
   { id: 4, title: "Media", description: "Images and visual content" },
   { id: 5, title: "Tickets", description: "Pricing and ticket types" },
   { id: 6, title: "Settings", description: "Additional configurations" },
-  { id: 7, title: "Review", description: "Review and publish" },
+  { id: 7, title: "GetDP Template", description: "Personalized attendee flyers" },
+  { id: 8, title: "Review", description: "Review and publish" },
 ]
 
 export function EventCreationWizard() {
@@ -112,6 +136,26 @@ export function EventCreationWizard() {
     customFields: [],
     slug: "",
     metaDescription: "",
+    getdpTemplate: {
+      enabled: false,
+      templateId: "default",
+      templateName: "I'm Attending",
+      backgroundColor: "#3A00C1",
+      textColor: "#FFFFFF",
+      eventLogo: null,
+      customText: "I'm attending {eventTitle}!",
+      photoPlaceholder: {
+        x: 50,
+        y: 100,
+        width: 120,
+        height: 120,
+      },
+      namePlaceholder: {
+        x: 50,
+        y: 240,
+        fontSize: 18,
+      },
+    },
   })
 
   const updateFormData = (updates: Partial<EventFormData>) => {
@@ -133,6 +177,8 @@ export function EventCreationWizard() {
       case 6:
         return true // Settings are optional
       case 7:
+        return true // GetDP template is optional
+      case 8:
         return true // Review step
       default:
         return false
@@ -159,6 +205,7 @@ export function EventCreationWizard() {
     if (!validateStep(currentStep)) {
       toast({
         title: "Please complete all required fields",
+        description: "Please try again later.",
         variant: "destructive",
       })
       return
@@ -215,6 +262,8 @@ export function EventCreationWizard() {
       case 6:
         return <SettingsStep formData={formData} updateFormData={updateFormData} />
       case 7:
+        return <GetDPTemplateStep formData={formData} updateFormData={updateFormData} />
+      case 8:
         return <ReviewStep formData={formData} />
       default:
         return null
@@ -227,6 +276,16 @@ export function EventCreationWizard() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
       <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/dashboard")}
+            className="flex items-center text-gray-600 hover:text-gray-900 p-0"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Event</h1>
         <p className="text-gray-600">Follow the steps below to create your event</p>
       </div>
