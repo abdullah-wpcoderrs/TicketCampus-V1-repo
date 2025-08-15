@@ -5,7 +5,9 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Starting event creation request")
 
-    const supabase = createClient()
+    console.log("[v0] All cookies:", request.cookies.getAll().map(c => ({name: c.name, value: c.value ? '[present]' : '[empty]'})))
+
+    const supabase = await createClient()
     console.log("[v0] Supabase client created")
 
     // Check if we have any cookies
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 

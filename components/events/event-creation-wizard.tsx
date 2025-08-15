@@ -301,7 +301,7 @@ export function EventCreationWizard() {
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
   }
-
+  
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) {
       toast({

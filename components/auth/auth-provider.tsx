@@ -108,23 +108,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const login = async (email: string, password: string) => {
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      // The onAuthStateChange callback will handle setting the user and redirecting
-    } catch (error) {
-      setLoading(false)
-      throw error
-    }
+  setLoading(true)
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    
+    if (error) throw error
+    
+    // The onAuthStateChange callback will handle the rest
+  } catch (error) {
+    setLoading(false)
+    throw error
   }
+}
 
   const signup = async (data: SignupData) => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
