@@ -320,6 +320,7 @@ export function EventCreationWizard() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // This ensures cookies are sent
         body: JSON.stringify(formData),
       })
 
