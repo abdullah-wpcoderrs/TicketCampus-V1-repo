@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,83 +10,55 @@ import { Calendar, Users, DollarSign, Plus, Search, Eye, Edit, MoreHorizontal } 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-
-// Mock data
-const mockEvents = [
-  {
-    id: "1",
-    title: "Tech Conference 2024",
-    description: "Annual technology conference featuring the latest innovations",
-    date: "2024-03-15",
-    time: "09:00",
-    location: "Lagos Continental Hotel",
-    attendees: 150,
-    capacity: 200,
-    revenue: 750000,
-    status: "active",
-    type: "paid",
-    category: "Technology",
-    slug: "tech-conference-2024",
-  },
-  {
-    id: "2",
-    title: "Marketing Workshop",
-    description: "Learn digital marketing strategies for small businesses",
-    date: "2024-03-20",
-    time: "14:00",
-    location: "Online Event",
-    attendees: 45,
-    capacity: 100,
-    revenue: 225000,
-    status: "upcoming",
-    type: "paid",
-    category: "Business & Professional",
-    slug: "marketing-workshop",
-  },
-  {
-    id: "3",
-    title: "Startup Pitch Night",
-    description: "Entrepreneurs pitch their ideas to investors",
-    date: "2024-02-28",
-    time: "18:00",
-    location: "Innovation Hub",
-    attendees: 80,
-    capacity: 100,
-    revenue: 0,
-    status: "completed",
-    type: "free",
-    category: "Business & Professional",
-    slug: "startup-pitch-night",
-  },
-  {
-    id: "4",
-    title: "Art Exhibition Opening",
-    description: "Contemporary art exhibition featuring local artists",
-    date: "2024-04-05",
-    time: "17:00",
-    location: "National Gallery",
-    attendees: 0,
-    capacity: 150,
-    revenue: 0,
-    status: "draft",
-    type: "free",
-    category: "Arts & Culture",
-    slug: "art-exhibition-opening",
-  },
-]
+import { useAuth } from "@/components/auth/auth-provider"
 
 export default function EventsPage() {
+  const { user } = useAuth()
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const router = useRouter()
 
-  const filteredEvents = mockEvents.filter((event) => {
+  useEffect(() => {
+    if (user) {
+      fetchUserEvents()
+    }
+  }, [user])
+
+  const fetchUserEvents = async () => {
+    try {
+      const response = await fetch(`/api/events?userId=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data)
+      }
+    } catch (error) {
+      console.error('Error fetching user events:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getEventStatus = (event: any) => {
+    const now = new Date()
+    const startDate = new Date(event.start_date)
+    const endDate = new Date(event.end_date)
+    
+    if (!event.is_published) return "draft"
+    if (endDate < now) return "completed"
+    if (startDate > now) return "upcoming"
+    return "active"
+  }
+
+  const filteredEvents = events.filter((event) => {
+    const eventStatus = getEventStatus(event)
     const matchesSearch =
       event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || event.status === statusFilter
-    const matchesType = typeFilter === "all" || event.type === typeFilter
+    const matchesStatus = statusFilter === "all" || eventStatus === statusFilter
+    const matchesType = typeFilter === "all" || event.event_type === typeFilter
 
     return matchesSearch && matchesStatus && matchesType
   })
@@ -104,6 +76,25 @@ export default function EventsPage() {
       default:
         return "outline"
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Events</h1>
+            <p className="text-gray-600">Manage all your events in one place</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your events...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const handleEventClick = (eventId: string) => {
@@ -168,83 +159,92 @@ export default function EventsPage() {
 
       {/* Events Grid */}
       <div className="grid gap-6">
-        {filteredEvents.map((event) => (
-          <Card
-            key={event.id}
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => handleEventClick(event.id)}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold hover:text-purple-600 transition-colors">{event.title}</h3>
-                    <Badge variant={getStatusColor(event.status)}>{event.status}</Badge>
-                    <Badge variant="outline">{event.type}</Badge>
-                  </div>
-                  <p className="text-gray-600 mb-4">{event.description}</p>
+        {filteredEvents.map((event) => {
+          const eventStatus = getEventStatus(event)
+          return (
+            <Card
+              key={event.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleEventClick(event.id)}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="text-lg font-semibold hover:text-purple-600 transition-colors">{event.title}</h3>
+                      <Badge variant={getStatusColor(eventStatus)}>{eventStatus}</Badge>
+                      <Badge variant="outline">{event.event_type}</Badge>
+                    </div>
+                    <p className="text-gray-600 mb-4">{event.description}</p>
 
-                  <div className="grid md:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center text-gray-500">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {new Date(event.date).toLocaleDateString()} at {event.time}
+                    <div className="grid md:grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center text-gray-500">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {new Date(event.start_date).toLocaleDateString()} at {event.start_time}
+                      </div>
+                      <div className="flex items-center text-gray-500">
+                        <Users className="w-4 h-4 mr-2" />
+                        {event.max_capacity} capacity
+                      </div>
+                      <div className="flex items-center text-gray-500">
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        {event.event_type === "free" ? "Free" : "Paid"} event
+                      </div>
                     </div>
-                    <div className="flex items-center text-gray-500">
-                      <Users className="w-4 h-4 mr-2" />
-                      {event.attendees}/{event.capacity} attendees
-                    </div>
-                    <div className="flex items-center text-gray-500">
-                      <DollarSign className="w-4 h-4 mr-2" />₦{event.revenue.toLocaleString()} revenue
-                    </div>
+
+                    <p className="text-sm text-gray-500 mt-2">
+                      {event.is_online ? "Online Event" : `${event.venue_name || event.city}`} • {event.category}
+                    </p>
                   </div>
 
-                  <p className="text-sm text-gray-500 mt-2">
-                    {event.location} • {event.category}
-                  </p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/events/${event.id}`)
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/edit-event/${event.id}`)
+                        }}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Event
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/analytics/${event.id}`)
+                        }}
+                      >
+                        View Analytics
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/attendees/${event.id}`)
+                        }}
+                      >
+                        Manage Attendees
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        router.push(`/dashboard/events/${event.id}`)
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Event
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        router.push(`/dashboard/analytics/${event.id}`)
-                      }}
-                    >
-                      View Analytics
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        router.push(`/dashboard/attendees/${event.id}`)
-                      }}
-                    >
-                      Manage Attendees
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {filteredEvents.length === 0 && (

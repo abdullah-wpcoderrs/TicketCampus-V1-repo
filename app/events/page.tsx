@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,119 +10,6 @@ import { Calendar, MapPin, Users, Search, Filter } from "lucide-react"
 import Link from "next/link"
 import { SiteHeader } from "@/components/shared/site-header"
 
-// Mock public events data
-const mockPublicEvents = [
-  {
-    id: "1",
-    slug: "tech-conference-2024",
-    title: "Tech Conference 2024",
-    description: "Annual technology conference featuring the latest innovations in AI, blockchain, and web development",
-    startDate: "2024-03-15",
-    startTime: "09:00",
-    endDate: "2024-03-15",
-    endTime: "17:00",
-    location: "Lagos Continental Hotel",
-    city: "Lagos",
-    state: "Lagos",
-    isOnline: false,
-    category: "Technology",
-    eventType: "paid",
-    bannerImage: "/tech-conference.png",
-    attendeeCount: 150,
-    maxCapacity: 200,
-    basePrice: 25000,
-    organizer: "Tech Hub Lagos",
-    isPublished: true,
-  },
-  {
-    id: "2",
-    slug: "marketing-workshop",
-    title: "Digital Marketing Workshop",
-    description: "Learn digital marketing strategies for small businesses and startups",
-    startDate: "2024-03-20",
-    startTime: "14:00",
-    endDate: "2024-03-20",
-    endTime: "18:00",
-    location: "Online Event",
-    city: "Online",
-    state: "Online",
-    isOnline: true,
-    category: "Business & Professional",
-    eventType: "paid",
-    bannerImage: "/marketing-workshop.png",
-    attendeeCount: 45,
-    maxCapacity: 100,
-    basePrice: 15000,
-    organizer: "Marketing Pro Academy",
-    isPublished: true,
-  },
-  {
-    id: "3",
-    slug: "startup-pitch-night",
-    title: "Startup Pitch Night",
-    description: "Entrepreneurs pitch their innovative ideas to investors and industry experts",
-    startDate: "2024-03-25",
-    startTime: "18:00",
-    endDate: "2024-03-25",
-    endTime: "21:00",
-    location: "Innovation Hub",
-    city: "Abuja",
-    state: "FCT",
-    isOnline: false,
-    category: "Business & Professional",
-    eventType: "free",
-    bannerImage: "/startup-pitch.png",
-    attendeeCount: 80,
-    maxCapacity: 100,
-    basePrice: 0,
-    organizer: "Startup Community Abuja",
-    isPublished: true,
-  },
-  {
-    id: "4",
-    slug: "art-exhibition-opening",
-    title: "Contemporary Art Exhibition",
-    description: "Opening night for contemporary art exhibition featuring local and international artists",
-    startDate: "2024-04-05",
-    startTime: "17:00",
-    endDate: "2024-04-05",
-    endTime: "22:00",
-    location: "National Gallery",
-    city: "Lagos",
-    state: "Lagos",
-    isOnline: false,
-    category: "Arts & Culture",
-    eventType: "free",
-    bannerImage: "/art-exhibition.png",
-    attendeeCount: 25,
-    maxCapacity: 150,
-    basePrice: 0,
-    organizer: "National Gallery Lagos",
-    isPublished: true,
-  },
-  {
-    id: "5",
-    slug: "fitness-bootcamp",
-    title: "Weekend Fitness Bootcamp",
-    description: "High-intensity fitness bootcamp for all fitness levels with professional trainers",
-    startDate: "2024-03-30",
-    startTime: "07:00",
-    endDate: "2024-03-30",
-    endTime: "09:00",
-    location: "Tafawa Balewa Square",
-    city: "Lagos",
-    state: "Lagos",
-    isOnline: false,
-    category: "Sports & Fitness",
-    eventType: "paid",
-    bannerImage: "/fitness-bootcamp.png",
-    attendeeCount: 30,
-    maxCapacity: 50,
-    basePrice: 5000,
-    organizer: "FitLife Lagos",
-    isPublished: true,
-  },
-]
 
 const categories = [
   "All Categories",
@@ -139,27 +26,46 @@ const categories = [
 const locations = ["All Locations", "Lagos", "Abuja", "Port Harcourt", "Kano", "Online"]
 
 export default function EventsPage() {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [selectedLocation, setSelectedLocation] = useState("All Locations")
   const [eventType, setEventType] = useState("all")
 
-  const filteredEvents = mockPublicEvents.filter((event) => {
+  useEffect(() => {
+    fetchPublicEvents()
+  }, [])
+
+  const fetchPublicEvents = async () => {
+    try {
+      const response = await fetch('/api/events')
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data)
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredEvents = events.filter((event) => {
     const matchesSearch =
       event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.organizer.toLowerCase().includes(searchTerm.toLowerCase())
+      event.description.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesCategory = selectedCategory === "All Categories" || event.category === selectedCategory
 
     const matchesLocation =
       selectedLocation === "All Locations" ||
       event.state === selectedLocation ||
-      (selectedLocation === "Online" && event.isOnline)
+      (selectedLocation === "Online" && event.is_online)
 
-    const matchesType = eventType === "all" || event.eventType === eventType
+    const matchesType = eventType === "all" || event.event_type === eventType
 
-    return matchesSearch && matchesCategory && matchesLocation && matchesType && event.isPublished
+    return matchesSearch && matchesCategory && matchesLocation && matchesType && event.is_published
   })
 
   const formatDate = (date: string, time: string) => {
@@ -171,6 +77,22 @@ export default function EventsPage() {
       hour: "numeric",
       minute: "2-digit",
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <SiteHeader />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading events...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -255,13 +177,13 @@ export default function EventsPage() {
               <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow rounded-md">
                 <div className="aspect-video relative">
                   <img
-                    src={event.bannerImage || "/placeholder.svg"}
+                    src={event.banner_image_url || "/placeholder.svg"}
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-3 left-3">
-                    <Badge variant={event.eventType === "free" ? "secondary" : "default"}>
-                      {event.eventType === "free" ? "Free" : `₦${event.basePrice.toLocaleString()}`}
+                    <Badge variant={event.event_type === "free" ? "secondary" : "default"}>
+                      {event.event_type === "free" ? "Free" : "Paid"}
                     </Badge>
                   </div>
                 </div>
@@ -275,22 +197,22 @@ export default function EventsPage() {
                     <div className="space-y-2 text-sm text-gray-500">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-2" />
-                        {formatDate(event.startDate, event.startTime)}
+                        {formatDate(event.start_date, event.start_time)}
                       </div>
                       <div className="flex items-center">
                         <MapPin className="w-4 h-4 mr-2" />
-                        {event.isOnline ? "Online Event" : `${event.location}, ${event.city}`}
+                        {event.is_online ? "Online Event" : `${event.venue_name || event.city}, ${event.city}`}
                       </div>
                       <div className="flex items-center">
                         <Users className="w-4 h-4 mr-2" />
-                        {event.attendeeCount}/{event.maxCapacity} attending
+                        {event.max_capacity} capacity
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
                       <div>
-                        <p className="text-xs text-gray-500">Organized by</p>
-                        <p className="text-sm font-medium">{event.organizer}</p>
+                        <p className="text-xs text-gray-500">Event</p>
+                        <p className="text-sm font-medium">{event.category}</p>
                       </div>
                       <Link href={`/events/${event.slug}`}>
                         <Button size="sm" className="bg-[#3A00C1] hover:bg-[#2A0091] rounded-md">

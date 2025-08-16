@@ -33,7 +33,7 @@ export default function EventDetailsPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState("")
   const [loading, setLoading] = useState(true)
 
-  const eventUrl = event ? `${window.location.origin}/events/${event.slug}` : ""
+  const eventUrl = event && typeof window !== 'undefined' ? `${window.location.origin}/events/${event.slug}` : ""
 
   useEffect(() => {
     fetchEventDetails()
@@ -56,37 +56,13 @@ export default function EventDetailsPage() {
 
   const fetchEventDetails = async () => {
     try {
-      // Mock data for now - replace with actual API call
-      const mockEvent = {
-        id: params.id,
-        title: "Tech Conference 2024",
-        description:
-          "Annual technology conference featuring the latest innovations in AI, blockchain, and web development.",
-        slug: "tech-conference-2024",
-        category: "Technology",
-        event_type: "paid",
-        start_date: "2024-03-15",
-        end_date: "2024-03-15",
-        start_time: "09:00",
-        end_time: "17:00",
-        timezone: "Africa/Lagos",
-        is_online: false,
-        venue_name: "Lagos Continental Hotel",
-        venue_address: "52A Kofo Abayomi Street, Victoria Island",
-        city: "Lagos",
-        state: "Lagos",
-        country: "Nigeria",
-        max_capacity: 200,
-        is_published: true,
-        allow_guest_registration: true,
-        requires_approval: false,
-        created_at: "2024-02-01T10:00:00Z",
-        attendees_count: 150,
-        revenue: 750000,
-        tickets_sold: 150,
+      const response = await fetch(`/api/events/${params.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setEvent(data)
+      } else {
+        throw new Error('Event not found')
       }
-
-      setEvent(mockEvent)
     } catch (error) {
       console.error("Error fetching event:", error)
       toast({
@@ -174,7 +150,10 @@ export default function EventDetailsPage() {
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          <Button variant="outline">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push(`/edit-event/${event.id}`)}
+          >
             <Edit className="w-4 h-4 mr-2" />
             Edit Event
           </Button>
@@ -191,7 +170,7 @@ export default function EventDetailsPage() {
                 <Badge variant={event.is_published ? "default" : "secondary"}>
                   {event.is_published ? "Published" : "Draft"}
                 </Badge>
-                <Badge variant="outline">{event.event_type}</Badge>
+                <Badge variant="outline">{event.event_type || "free"}</Badge>
               </div>
               <p className="text-gray-600 mb-4">{event.description}</p>
             </div>
@@ -230,8 +209,8 @@ export default function EventDetailsPage() {
             <div className="flex items-center text-gray-600">
               <DollarSign className="w-4 h-4 mr-2" />
               <div>
-                <p className="text-sm font-medium">Revenue</p>
-                <p className="text-sm">₦{event.revenue?.toLocaleString() || 0}</p>
+                <p className="text-sm font-medium">Type</p>
+                <p className="text-sm">{event.event_type === "free" ? "Free Event" : "Paid Event"}</p>
               </div>
             </div>
           </div>
@@ -398,16 +377,16 @@ export default function EventDetailsPage() {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{event.tickets_sold || 0}</p>
-                    <p className="text-sm text-gray-600">Tickets Sold</p>
+                    <p className="text-2xl font-bold text-gray-900">{event.max_capacity}</p>
+                    <p className="text-sm text-gray-600">Capacity</p>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{event.max_capacity - (event.tickets_sold || 0)}</p>
-                    <p className="text-sm text-gray-600">Available</p>
+                    <p className="text-2xl font-bold text-gray-900">{event.is_published ? "Published" : "Draft"}</p>
+                    <p className="text-sm text-gray-600">Status</p>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">₦{event.revenue?.toLocaleString() || 0}</p>
-                    <p className="text-sm text-gray-600">Revenue</p>
+                    <p className="text-2xl font-bold text-gray-900">{event.event_type === "free" ? "Free" : "Paid"}</p>
+                    <p className="text-sm text-gray-600">Event Type</p>
                   </div>
                 </div>
               </div>
