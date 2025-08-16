@@ -156,6 +156,18 @@ Please present this ticket at the event entrance.
               <CardDescription>Keep this information safe and present it at the event</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Banner Image */}
+              {ticketData.event?.banner_image_url && (
+                <div className="w-full mb-4">
+                  <img
+                    src={ticketData.event.banner_image_url}
+                    alt="Event Banner"
+                    className="w-full h-40 object-cover rounded-lg"
+                    onError={e => { e.currentTarget.src = "/placeholder.svg" }}
+                  />
+                </div>
+              )}
+
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <div className="text-center">
                   <h3 className="text-lg font-bold text-purple-900 mb-2">Ticket Code</h3>

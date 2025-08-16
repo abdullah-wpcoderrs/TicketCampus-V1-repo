@@ -133,6 +133,17 @@ export default function EventDetailsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Banner Image */}
+      {event.banner_image_url && (
+        <div className="w-full mb-4">
+          <img
+            src={event.banner_image_url}
+            alt="Event Banner"
+            className="w-full h-64 object-cover rounded-lg"
+            onError={e => { e.currentTarget.src = "/placeholder.svg" }}
+          />
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">

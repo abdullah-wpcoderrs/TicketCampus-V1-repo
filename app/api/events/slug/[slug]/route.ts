@@ -5,12 +5,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { slug } = params
   try {
     const supabase = await createClient()
     const { data: event, error } = await supabase
       .from("events")
-      .select("*")
-      .eq("slug", params.slug)
+      .select("*, banner_image_url") // explicitly select banner_image_url
+      .eq("slug", slug)
       .eq("is_published", true)
       .single()
 

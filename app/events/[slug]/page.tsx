@@ -175,11 +175,22 @@ export default function EventDetailPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-purple-600" />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{event.is_online ? "Online Event" : `${event.venue_name}`}</p>
                     <p className="text-sm text-gray-500">
                       {event.is_online ? "Join from anywhere" : `${event.city}, ${event.state}`}
                     </p>
+                    {event.is_online && event.meeting_link && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(event.meeting_link, '_blank')}
+                        className="mt-2 text-xs"
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        Join Meeting
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -203,9 +214,10 @@ export default function EventDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             <Tabs defaultValue="about" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={`grid w-full ${event.is_online ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <TabsTrigger value="about">About</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
+                {event.is_online && <TabsTrigger value="venue">Venue</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="about" className="space-y-6">
@@ -313,6 +325,64 @@ export default function EventDetailPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {event.is_online && (
+                <TabsContent value="venue">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Online Event Details</CardTitle>
+                      <CardDescription>Join information for this online event</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <Globe className="w-5 h-5 text-purple-600" />
+                          <div>
+                            <p className="font-medium">Event Type</p>
+                            <p className="text-sm text-gray-600">Online Event - Join from anywhere</p>
+                          </div>
+                        </div>
+                        
+                        {event.meeting_link && (
+                          <div className="flex items-center space-x-3">
+                            <ExternalLink className="w-5 h-5 text-purple-600" />
+                            <div className="flex-1">
+                              <p className="font-medium">Meeting Link</p>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <p className="text-sm text-gray-600 break-all">{event.meeting_link}</p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(event.meeting_link, '_blank')}
+                                  className="shrink-0"
+                                >
+                                  <ExternalLink className="w-4 h-4 mr-1" />
+                                  Join
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-blue-900">Important Notes</p>
+                              <ul className="text-sm text-blue-800 mt-1 space-y-1">
+                                <li>• Meeting link will be sent to registered participants 1 hour before the event</li>
+                                <li>• Please test your audio and video before joining</li>
+                                <li>• Ensure you have a stable internet connection</li>
+                                {event.meeting_link && <li>• You can bookmark this link for easy access</li>}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
 
