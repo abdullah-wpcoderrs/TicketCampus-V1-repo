@@ -1,47 +1,79 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Users, DollarSign, TrendingUp, Plus, Eye } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/components/auth/auth-provider"
 
-// Mock data - replace with real API calls
-const mockStats = {
-  totalEvents: 12,
-  totalAttendees: 1247,
-  totalRevenue: 2450000,
-  activeEvents: 3,
+interface DashboardStats {
+  totalEvents: number
+  totalAttendees: number
+  totalRevenue: number
+  activeEvents: number
+  upcomingEvents: number
+  completedEvents: number
+  recentEvents: Array<{
+    id: string
+    title: string
+    date: string
+    attendees: number
+    revenue: number
+    status: string
+    maxCapacity: number
+  }>
 }
 
-const mockRecentEvents = [
-  {
-    id: "1",
-    title: "Tech Conference 2024",
-    date: "2024-03-15",
-    attendees: 150,
-    revenue: 750000,
-    status: "active",
-  },
-  {
-    id: "2",
-    title: "Marketing Workshop",
-    date: "2024-03-20",
-    attendees: 45,
-    revenue: 225000,
-    status: "upcoming",
-  },
-  {
-    id: "3",
-    title: "Startup Pitch Night",
-    date: "2024-02-28",
-    attendees: 80,
-    revenue: 0,
-    status: "completed",
-  },
-]
-
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalEvents: 0,
+    totalAttendees: 0,
+    totalRevenue: 0,
+    activeEvents: 0,
+    upcomingEvents: 0,
+    completedEvents: 0,
+    recentEvents: []
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardStats()
+    }
+  }, [user])
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await fetch(`/api/analytics/dashboard?userId=${user?.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Loading your dashboard...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,8 +97,10 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalEvents}</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
+            <div className="text-2xl font-bold">{stats.totalEvents}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalEvents === 0 ? "Create your first event" : `${stats.upcomingEvents} upcoming`}
+            </p>
           </CardContent>
         </Card>
 
@@ -76,8 +110,10 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalAttendees.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+180 from last month</p>
+            <div className="text-2xl font-bold">{stats.totalAttendees.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalEvents === 0 ? "No events yet" : `Across ${stats.totalEvents} events`}
+            </p>
           </CardContent>
         </Card>
 
@@ -87,8 +123,10 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{mockStats.totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalRevenue === 0 ? "Start earning from events" : "From ticket sales"}
+            </p>
           </CardContent>
         </Card>
 
@@ -98,8 +136,10 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.activeEvents}</div>
-            <p className="text-xs text-muted-foreground">Currently running</p>
+            <div className="text-2xl font-bold">{stats.activeEvents}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.activeEvents === 0 ? "No active events" : "Currently running"}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -120,34 +160,50 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {mockRecentEvents.map((event) => (
-              <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <h4 className="font-medium">{event.title}</h4>
-                    <Badge
-                      variant={
-                        event.status === "active" ? "default" : event.status === "upcoming" ? "secondary" : "outline"
-                      }
-                    >
-                      {event.status}
-                    </Badge>
+          {stats.recentEvents.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No events yet</h3>
+              <p className="text-gray-600 mb-4">Create your first event to get started</p>
+              <Link href="/create-event">
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Event
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {stats.recentEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <h4 className="font-medium">{event.title}</h4>
+                      <Badge
+                        variant={
+                          event.status === "active" ? "default" : event.status === "upcoming" ? "secondary" : "outline"
+                        }
+                      >
+                        {event.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
-                  </p>
+                  <div className="text-right">
+                    <p className="font-medium">₦{event.revenue.toLocaleString()}</p>
+                    <Link href={`/dashboard/events/${event.id}`}>
+                      <Button variant="ghost" size="sm" className="mt-1">
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">₦{event.revenue.toLocaleString()}</p>
-                  <Button variant="ghost" size="sm" className="mt-1">
-                    <Eye className="w-4 h-4 mr-1" />
-                    View
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

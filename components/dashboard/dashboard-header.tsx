@@ -76,7 +76,7 @@ export function DashboardHeader() {
                 <Link href="/dashboard/wallet">Wallet</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => logout()}>Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

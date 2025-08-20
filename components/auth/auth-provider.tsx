@@ -58,6 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUser(null)
+        // Handle logout event explicitly
+        if (event === "SIGNED_OUT") {
+          router.push("/")
+        }
       }
       setLoading(false)
     })
@@ -145,9 +149,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    router.push("/")
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("Error signing out:", error)
+        // Still proceed with local cleanup even if remote signout fails
+      }
+      setUser(null)
+      router.push("/")
+    } catch (error) {
+      console.error("Unexpected error during logout:", error)
+      // Force local cleanup and redirect even if there's an error
+      setUser(null)
+      router.push("/")
+    }
   }
 
   const updateProfile = async (data: Partial<User>) => {

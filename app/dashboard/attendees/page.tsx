@@ -1,82 +1,103 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Users, Search, Download, Mail, Phone, Calendar } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Users, UserCheck, Clock, Download, Filter, Calendar, Mail, Phone } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/components/auth/auth-provider"
+import Link from "next/link"
 
-// Mock attendees data
-const mockAttendees = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+234 801 234 5678",
-    eventTitle: "Tech Conference 2024",
-    eventId: "1",
-    ticketType: "VIP",
-    registrationDate: "2024-03-01T10:00:00Z",
-    status: "confirmed",
-    amount: 25000,
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "+234 802 345 6789",
-    eventTitle: "Marketing Workshop",
-    eventId: "2",
-    ticketType: "Regular",
-    registrationDate: "2024-03-02T14:30:00Z",
-    status: "confirmed",
-    amount: 15000,
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike@example.com",
-    phone: "+234 803 456 7890",
-    eventTitle: "Tech Conference 2024",
-    eventId: "1",
-    ticketType: "Student",
-    registrationDate: "2024-03-03T09:15:00Z",
-    status: "pending",
-    amount: 10000,
-  },
-  {
-    id: "4",
-    name: "Sarah Wilson",
-    email: "sarah@example.com",
-    phone: "+234 804 567 8901",
-    eventTitle: "Startup Pitch Night",
-    eventId: "3",
-    ticketType: "Free",
-    registrationDate: "2024-03-04T16:45:00Z",
-    status: "confirmed",
-    amount: 0,
-  },
-]
+interface AttendeeStats {
+  totalAttendees: number
+  confirmedAttendees: number
+  pendingAttendees: number
+  totalRevenue: number
+}
 
-const mockStats = {
-  totalAttendees: 1247,
-  confirmedAttendees: 1180,
-  pendingAttendees: 67,
-  totalRevenue: 18750000,
+interface Attendee {
+  id: string
+  name: string
+  email: string
+  phone: string
+  event: string
+  ticketType: string
+  status: string
+  registrationDate: string
+  amount: number
 }
 
 export default function AttendeesPage() {
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEvent, setSelectedEvent] = useState("all")
-
-  const filteredAttendees = mockAttendees.filter((attendee) => {
-    const matchesSearch =
-      attendee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      attendee.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesEvent = selectedEvent === "all" || attendee.eventId === selectedEvent
-    return matchesSearch && matchesEvent
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterEvent, setFilterEvent] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<AttendeeStats>({
+    totalAttendees: 0,
+    confirmedAttendees: 0,
+    pendingAttendees: 0,
+    totalRevenue: 0,
   })
+  const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [events, setEvents] = useState<string[]>([])
+
+  useEffect(() => {
+    if (user) {
+      fetchAttendeesData()
+    }
+  }, [user])
+
+  const fetchAttendeesData = async () => {
+    try {
+      // Fetch attendee stats
+      const statsResponse = await fetch(`/api/attendees/stats?userId=${user?.id}`)
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        setStats(statsData)
+      }
+
+      // Fetch attendees list
+      const attendeesResponse = await fetch(`/api/attendees?userId=${user?.id}`)
+      if (attendeesResponse.ok) {
+        const attendeesData = await attendeesResponse.json()
+        setAttendees(attendeesData.attendees || [])
+
+        // Extract unique event names
+        const uniqueEvents = [...new Set(attendeesData.attendees?.map((a: Attendee) => a.event) || [])] as string[]
+        setEvents(uniqueEvents)
+      }
+    } catch (error) {
+      console.error('Error fetching attendees data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredAttendees = attendees.filter((attendee) => {
+    const matchesSearch = attendee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         attendee.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "all" || attendee.status === filterStatus
+    const matchesEvent = filterEvent === "all" || attendee.event === filterEvent
+    return matchesSearch && matchesStatus && matchesEvent
+  })
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Attendees</h2>
+          <p className="text-muted-foreground">Loading attendees data...</p>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -99,7 +120,7 @@ export default function AttendeesPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalAttendees.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{stats.totalAttendees.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Across all events</p>
           </CardContent>
         </Card>
@@ -110,7 +131,7 @@ export default function AttendeesPage() {
             <Users className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{mockStats.confirmedAttendees.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.confirmedAttendees.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Ready to attend</p>
           </CardContent>
         </Card>
@@ -121,7 +142,7 @@ export default function AttendeesPage() {
             <Users className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{mockStats.pendingAttendees}</div>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pendingAttendees}</div>
             <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
           </CardContent>
         </Card>
@@ -132,7 +153,7 @@ export default function AttendeesPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{mockStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">From registrations</p>
           </CardContent>
         </Card>
@@ -155,20 +176,43 @@ export default function AttendeesPage() {
                 className="pl-10"
               />
             </div>
-            <select
-              value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="all">All Events</option>
-              <option value="1">Tech Conference 2024</option>
-              <option value="2">Marketing Workshop</option>
-              <option value="3">Startup Pitch Night</option>
-            </select>
+            <Select value={filterEvent} onValueChange={setFilterEvent}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                {events.map((event) => (
+                  <SelectItem key={event} value={event}>{event}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-4">
-            {filteredAttendees.map((attendee) => (
+          {filteredAttendees.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No attendees yet</h3>
+              <p className="text-gray-600 mb-4">Attendees will appear here when people register for your events</p>
+              <Link href="/create-event">
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  Create Your First Event
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredAttendees.map((attendee) => (
               <div
                 key={attendee.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -201,12 +245,13 @@ export default function AttendeesPage() {
                     <Badge variant={attendee.status === "confirmed" ? "default" : "secondary"}>{attendee.status}</Badge>
                     <Badge variant="outline">{attendee.ticketType}</Badge>
                   </div>
-                  <p className="text-sm text-gray-500">{attendee.eventTitle}</p>
+                  <p className="text-sm text-gray-500">{attendee.event}</p>
                   <p className="font-medium">₦{attendee.amount.toLocaleString()}</p>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scientific Calculator - Main UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./calculator_theme_1.css">
+  <style>
+    body { font-family: 'Poppins', sans-serif !important; }
+    .calc-btn {
+      font-size: 1.35rem;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+      background: var(--card);
+      color: var(--foreground);
+      transition: box-shadow 0.12s, transform 0.12s, background 0.15s;
+      padding: 0.9rem 0;
+      user-select: none;
+    }
+    .calc-btn:active {
+      transform: scale(0.96);
+      box-shadow: var(--shadow-2xs);
+    }
+    .calc-btn.op {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      box-shadow: var(--shadow-sm);
+    }
+    .calc-btn.equals {
+      background: var(--accent);
+      color: var(--accent-foreground);
+      box-shadow: 0 0 0 2px var(--accent);
+      transition: box-shadow 0.18s, transform 0.18s;
+    }
+    .calc-btn.equals:active {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 4px var(--accent);
+    }
+    .calc-btn.destructive {
+      background: var(--destructive);
+      color: var(--destructive-foreground);
+    }
+    .calc-btn:focus {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+    }
+    .calc-btn:hover {
+      background: var(--muted);
+      box-shadow: var(--shadow-md);
+    }
+    .calc-btn.op:hover, .calc-btn.equals:hover {
+      background: oklch(0.80 0.18 60);
+    }
+    .calc-btn.destructive:hover {
+      background: oklch(0.60 0.18 30);
+    }
+    .calc-display {
+      min-height: 3.5rem;
+      font-size: 2.1rem;
+      font-weight: 600;
+      text-align: right;
+      padding: 1.2rem 1.2rem 0.6rem 1.2rem;
+      background: var(--card);
+      color: var(--foreground);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      box-shadow: var(--shadow-xs);
+      overflow-x: auto;
+      transition: box-shadow 0.2s, background 0.2s;
+    }
+    .calc-container {
+      background: var(--card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: 1.2rem 1.2rem 2rem 1.2rem;
+      max-width: 24rem;
+      margin: 2.5rem auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    @media (max-width: 500px) {
+      .calc-container { max-width: 100vw; margin: 0; border-radius: 0; }
+      .calc-display { font-size: 1.3rem; padding: 0.8rem 0.6rem 0.4rem 0.6rem; }
+      .calc-btn { font-size: 1.1rem; padding: 0.7rem 0; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center" style="background: var(--background);">
+  <div class="calc-container w-full">
+    <div class="calc-display" id="calc-display">0</div>
+    <div class="grid grid-cols-4 gap-3 mt-2">
+      <button class="calc-btn destructive" tabindex="1">AC</button>
+      <button class="calc-btn destructive" tabindex="2">⌫</button>
+      <button class="calc-btn op" tabindex="3">%</button>
+      <button class="calc-btn op" tabindex="4">÷</button>
+      <button class="calc-btn" tabindex="5">7</button>
+      <button class="calc-btn" tabindex="6">8</button>
+      <button class="calc-btn" tabindex="7">9</button>
+      <button class="calc-btn op" tabindex="8">×</button>
+      <button class="calc-btn" tabindex="9">4</button>
+      <button class="calc-btn" tabindex="10">5</button>
+      <button class="calc-btn" tabindex="11">6</button>
+      <button class="calc-btn op" tabindex="12">−</button>
+      <button class="calc-btn" tabindex="13">1</button>
+      <button class="calc-btn" tabindex="14">2</button>
+      <button class="calc-btn" tabindex="15">3</button>
+      <button class="calc-btn op" tabindex="16">+</button>
+      <button class="calc-btn" tabindex="17">±</button>
+      <button class="calc-btn" tabindex="18">0</button>
+      <button class="calc-btn" tabindex="19">.</button>
+      <button class="calc-btn equals" tabindex="20">=</button>
+    </div>
+  </div>
+</body>
+</html>

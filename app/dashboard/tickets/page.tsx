@@ -1,91 +1,131 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Ticket, Plus, Edit, Trash2, Users, DollarSign, TrendingUp, Eye } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Ticket, Plus, Edit, Trash2, Users, DollarSign, TrendingUp } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/components/auth/auth-provider"
 import Link from "next/link"
 
-// Mock ticket types data
-const mockTicketTypes = [
-  {
-    id: "1",
-    name: "VIP Pass",
-    eventTitle: "Tech Conference 2024",
-    eventId: "1",
-    price: 25000,
-    totalQuantity: 50,
-    soldQuantity: 35,
-    status: "active",
-    description: "Premium access with networking dinner",
-  },
-  {
-    id: "2",
-    name: "Regular Ticket",
-    eventTitle: "Tech Conference 2024",
-    eventId: "1",
-    price: 15000,
-    totalQuantity: 200,
-    soldQuantity: 180,
-    status: "active",
-    description: "Standard conference access",
-  },
-  {
-    id: "3",
-    name: "Student Discount",
-    eventTitle: "Tech Conference 2024",
-    eventId: "1",
-    price: 10000,
-    totalQuantity: 100,
-    soldQuantity: 45,
-    status: "active",
-    description: "Discounted rate for students",
-  },
-  {
-    id: "4",
-    name: "Early Bird",
-    eventTitle: "Marketing Workshop",
-    eventId: "2",
-    price: 12000,
-    totalQuantity: 30,
-    soldQuantity: 30,
-    status: "sold_out",
-    description: "Limited early bird pricing",
-  },
-]
+interface TicketStats {
+  totalTicketTypes: number
+  totalSold: number
+  totalRevenue: number
+  activeTypes: number
+}
 
-const mockStats = {
-  totalTicketTypes: 12,
-  activeTickets: 8,
-  soldOut: 2,
-  totalRevenue: 3250000,
+interface TicketType {
+  id: string
+  name: string
+  event: string
+  price: number
+  sold: number
+  capacity: number
+  status: string
+  description: string
 }
 
 export default function TicketsPage() {
+  const { user } = useAuth()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<TicketStats>({
+    totalTicketTypes: 0,
+    totalSold: 0,
+    totalRevenue: 0,
+    activeTypes: 0,
+  })
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([])
+  const [events, setEvents] = useState<string[]>([])
+
+  useEffect(() => {
+    if (user) {
+      fetchTicketsData()
+    }
+  }, [user])
+
+  const fetchTicketsData = async () => {
+    try {
+      // Fetch ticket stats
+      const statsResponse = await fetch(`/api/tickets/stats?userId=${user?.id}`)
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        setStats(statsData)
+      }
+
+      // Fetch ticket types
+      const typesResponse = await fetch(`/api/tickets/types?userId=${user?.id}`)
+      if (typesResponse.ok) {
+        const typesData = await typesResponse.json()
+        setTicketTypes(typesData.ticketTypes || [])
+
+        // Extract unique event names
+        const uniqueEvents = [...new Set(typesData.ticketTypes?.map((t: TicketType) => t.event) || [])] as string[]
+        setEvents(uniqueEvents)
+      }
+    } catch (error) {
+      console.error('Error fetching tickets data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredTicketTypes = selectedEvent === "all"
+    ? ticketTypes
+    : ticketTypes.filter(ticket => ticket.event === selectedEvent)
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Tickets</h2>
+          <p className="text-muted-foreground">Loading tickets data...</p>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      </div>
+    )
+  }
+
   const [newTicket, setNewTicket] = useState({
     name: "",
     price: "",
     quantity: "",
-    description: "",
+    description: ""
   })
 
-  const handleCreateTicket = () => {
-    // Handle ticket creation
-    console.log("Creating ticket:", newTicket)
-    setIsCreateDialogOpen(false)
-    setNewTicket({ name: "", price: "", quantity: "", description: "" })
+  const handleCreateTicket = async () => {
+    try {
+      const response = await fetch('/api/tickets/types', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newTicket.name,
+          price: parseFloat(newTicket.price),
+          capacity: parseInt(newTicket.quantity),
+          description: newTicket.description
+        })
+      })
+      
+      if (response.ok) {
+        setIsCreateDialogOpen(false)
+        setNewTicket({ name: "", price: "", quantity: "", description: "" })
+        fetchTicketsData() // Refresh data
+      }
+    } catch (error) {
+      console.error('Error creating ticket type:', error)
+    }
   }
 
   return (
@@ -162,7 +202,7 @@ export default function TicketsPage() {
             <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalTicketTypes}</div>
+            <div className="text-2xl font-bold">{stats.totalTicketTypes}</div>
             <p className="text-xs text-muted-foreground">Across all events</p>
           </CardContent>
         </Card>
@@ -173,7 +213,7 @@ export default function TicketsPage() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{mockStats.activeTickets}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.activeTypes}</div>
             <p className="text-xs text-muted-foreground">Currently selling</p>
           </CardContent>
         </Card>
@@ -184,7 +224,7 @@ export default function TicketsPage() {
             <Users className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{mockStats.soldOut}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.totalTicketTypes - stats.activeTypes}</div>
             <p className="text-xs text-muted-foreground">No longer available</p>
           </CardContent>
         </Card>
@@ -195,7 +235,7 @@ export default function TicketsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{mockStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">From ticket sales</p>
           </CardContent>
         </Card>
@@ -209,7 +249,31 @@ export default function TicketsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockTicketTypes.map((ticket) => (
+            <div className="flex items-center justify-between mb-4">
+              <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by event" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {events.map((event) => (
+                    <SelectItem key={event} value={event}>{event}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {filteredTicketTypes.length === 0 ? (
+              <div className="text-center py-8">
+                <Ticket className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No ticket types yet</h3>
+                <p className="text-gray-600 mb-4">Create ticket types for your events to start selling</p>
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Ticket Type
+                </Button>
+              </div>
+            ) : (
+              filteredTicketTypes.map((ticket) => (
               <div key={ticket.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
@@ -227,24 +291,24 @@ export default function TicketsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">{ticket.description}</p>
-                  <p className="text-sm text-gray-500">{ticket.eventTitle}</p>
+                  <p className="text-sm text-gray-500">{ticket.event}</p>
                 </div>
                 <div className="text-right mr-6">
                   <p className="font-medium text-lg">₦{ticket.price.toLocaleString()}</p>
                   <p className="text-sm text-gray-500">
-                    {ticket.soldQuantity}/{ticket.totalQuantity} sold
+                    {ticket.sold}/{ticket.capacity} sold
                   </p>
                   <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
                     <div
                       className="bg-purple-600 h-2 rounded-full"
-                      style={{ width: `${(ticket.soldQuantity / ticket.totalQuantity) * 100}%` }}
+                      style={{ width: `${(ticket.sold / ticket.capacity) * 100}%` }}
                     ></div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Link href={`/dashboard/attendees/${ticket.eventId}`}>
+                  <Link href={`/dashboard/attendees`}>
                     <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
+                      <Users className="w-4 h-4" />
                     </Button>
                   </Link>
                   <Button variant="ghost" size="sm">
@@ -255,7 +319,8 @@ export default function TicketsPage() {
                   </Button>
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

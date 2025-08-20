@@ -1,0 +1,57 @@
+:root {
+  --background: oklch(0.98 0.01 80);
+  --foreground: oklch(0.18 0.01 80);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 80);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 80);
+  --primary: oklch(0.75 0.18 60); /* Vibrant orange */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.92 0.02 80);
+  --secondary-foreground: oklch(0.18 0.01 80);
+  --muted: oklch(0.95 0.01 80);
+  --muted-foreground: oklch(0.45 0.01 80);
+  --accent: oklch(0.75 0.18 60);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.55 0.18 30);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.90 0.01 80);
+  --input: oklch(0.90 0.01 80);
+  --ring: oklch(0.75 0.18 60);
+  --chart-1: oklch(0.75 0.18 60);
+  --chart-2: oklch(0.55 0.18 30);
+  --chart-3: oklch(0.45 0.18 120);
+  --chart-4: oklch(0.65 0.18 200);
+  --chart-5: oklch(0.80 0.18 300);
+  --sidebar: oklch(0.95 0.01 80);
+  --sidebar-foreground: oklch(0.18 0.01 80);
+  --sidebar-primary: oklch(0.75 0.18 60);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.45 0.18 120);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.90 0.01 80);
+  --sidebar-ring: oklch(0.75 0.18 60);
+  --font-sans: 'Poppins', 'Inter', 'Roboto', sans-serif;
+  --font-serif: 'Merriweather', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 1.2rem;
+  --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.03);
+  --shadow-xs: 0 2px 4px 0px hsl(0 0% 0% / 0.04);
+  --shadow-sm: 0 4px 8px 0px hsl(0 0% 0% / 0.06);
+  --shadow: 0 8px 16px 0px hsl(0 0% 0% / 0.08);
+  --shadow-md: 0 12px 24px 0px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 16px 32px 0px hsl(0 0% 0% / 0.12);
+  --shadow-xl: 0 24px 48px 0px hsl(0 0% 0% / 0.14);
+  --shadow-2xl: 0 32px 64px 0px hsl(0 0% 0% / 0.16);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+}
+body {
+  font-family: var(--font-sans) !important;
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}

@@ -24,7 +24,29 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  // Protected routes that require authentication
+  const protectedPaths = ['/dashboard', '/create-event', '/admin']
+  const isProtectedPath = protectedPaths.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
+  
+  // If user is not authenticated and trying to access protected route
+  if (isProtectedPath && !user) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+  
+  // If user is authenticated and trying to access auth pages, redirect to dashboard
+  const authPaths = ['/login', '/signup']
+  const isAuthPath = authPaths.includes(request.nextUrl.pathname)
+  
+  if (isAuthPath && user) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   return response
 }
 

@@ -97,7 +97,7 @@ export default function HomePage() {
                       <Link href="/dashboard/profile">Profile Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => logout()}>Log out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
